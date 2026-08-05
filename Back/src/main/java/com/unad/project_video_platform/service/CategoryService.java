@@ -2,6 +2,7 @@ package com.unad.project_video_platform.service;
 
 import com.unad.project_video_platform.entity.Category;
 import com.unad.project_video_platform.repository.CategoryRepository;
+import com.unad.project_video_platform.repository.VideoRepository;
 import com.unad.project_video_platform.service.impl.ICategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,9 @@ public class CategoryService implements ICategoryService {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private VideoRepository videoRepository;
 
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
@@ -62,6 +66,11 @@ public class CategoryService implements ICategoryService {
     public void deleteCategory(Integer id) {
         if (!categoryRepository.existsById(id)) {
             throw new RuntimeException("Categoria no encontrada con id: " + id);
+        }
+
+        if (videoRepository.existsByCategoryId(id)) {
+            throw new IllegalArgumentException(
+                    "No se puede eliminar la categoria porque tiene contenido o videos relacionados. Verifique o reasigne esos contenidos antes de eliminarla.");
         }
 
         categoryRepository.deleteById(id);

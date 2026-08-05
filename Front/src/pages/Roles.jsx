@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import Toast from "../components/Toast";
 import Pagination from "../components/Pagination";
+import ConfirmDialog from "../components/ConfirmDialog";
 import RoleService from "../services/RoleService";
 
 const Roles = () => {
@@ -12,6 +13,7 @@ const Roles = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [editingRole, setEditingRole] = useState(null);
+  const [roleToDelete, setRoleToDelete] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState({
@@ -126,13 +128,14 @@ const Roles = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Estás seguro de eliminar este rol?")) return;
+  const handleDelete = async () => {
+    if (!roleToDelete?.id) return;
 
     try {
       setLoading(true);
-      await RoleService.delete(id);
+      await RoleService.delete(roleToDelete.id);
       showToast("Rol eliminado correctamente.");
+      setRoleToDelete(null);
       await cargarRoles();
     } catch (error) {
       console.error(error);
@@ -230,7 +233,7 @@ const Roles = () => {
                                 Editar
                               </button>
                               <button
-                                onClick={() => handleDelete(r.id)}
+                                onClick={() => setRoleToDelete(r)}
                                 className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-semibold"
                                 disabled={loading}
                               >
@@ -328,6 +331,14 @@ const Roles = () => {
           </div>
         </main>
       </div>
+      <ConfirmDialog
+        open={Boolean(roleToDelete)}
+        title="Eliminar rol"
+        message={`Estas seguro de eliminar el rol "${roleToDelete?.roleName || ""}"? Esta accion no se puede deshacer.`}
+        loading={loading}
+        onCancel={() => setRoleToDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
@@ -357,3 +368,4 @@ const clampPage = (page, totalItems, pageSize) => {
 };
 
 export default Roles;
+

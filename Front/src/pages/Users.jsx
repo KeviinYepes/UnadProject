@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import Toast from "../components/Toast";
 import Pagination from "../components/Pagination";
+import ConfirmDialog from "../components/ConfirmDialog";
 import UserService from "../services/UserService";
 import RoleService from "../services/RoleService";
 
@@ -14,6 +15,7 @@ const Users = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState({
@@ -142,13 +144,14 @@ const Users = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
+  const handleDelete = async () => {
+    if (!userToDelete?.id) return;
 
     try {
       setLoading(true);
-      await UserService.delete(id);
+      await UserService.delete(userToDelete.id);
       showToast("Usuario eliminado correctamente.");
+      setUserToDelete(null);
       cargarUsuarios();
     } catch (error) {
       console.error(error);
@@ -289,7 +292,7 @@ const Users = () => {
                                   Editar
                                 </button>
                                 <button
-                                  onClick={() => handleDelete(u.id)}
+                                  onClick={() => setUserToDelete(u)}
                                   className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-semibold"
                                   disabled={loading}
                                 >
@@ -439,6 +442,14 @@ const Users = () => {
           </div>
         </main>
       </div>
+      <ConfirmDialog
+        open={Boolean(userToDelete)}
+        title="Eliminar usuario"
+        message={`Estas seguro de eliminar el usuario "${getUserFullName(userToDelete)}"? Esta accion no se puede deshacer.`}
+        loading={loading}
+        onCancel={() => setUserToDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
@@ -484,6 +495,11 @@ const EstadoBadge = ({ estado }) => (
   </span>
 );
 
+const getUserFullName = (user) => {
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+  return fullName || user?.email || "seleccionado";
+};
+
 const paginate = (items, page, pageSize) => {
   const start = (page - 1) * pageSize;
   return items.slice(start, start + pageSize);
@@ -495,3 +511,4 @@ const clampPage = (page, totalItems, pageSize) => {
 };
 
 export default Users;
+

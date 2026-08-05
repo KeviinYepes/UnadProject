@@ -6,6 +6,7 @@ import AuthService from "../services/AuthService";
 import VideoStatsService from "../services/VideoStatsService";
 import ForumService from "../services/ForumService";
 import VideoService from "../services/VideoService";
+import CategoryService from "../services/CategoryService";
 import { buildApiUrl } from "../config/api";
 
 export default function VideoView() {
@@ -22,6 +23,7 @@ export default function VideoView() {
   const currentUser = AuthService.getCurrentUser();
   const canReplyToQuestions = normalizeRole(currentUser?.role) !== "USER";
   const canManageMaterials = normalizeRole(currentUser?.role) !== "USER";
+  const canEditContent = ["ADMIN", "MODERATOR"].includes(normalizeRole(currentUser?.role));
   const canDeleteContent = normalizeRole(currentUser?.role) === "ADMIN";
   const videoId = getYouTubeVideoId(getContentUrl(content));
   const playerRef = useRef(null);
@@ -43,6 +45,16 @@ export default function VideoView() {
   const [contentDeleting, setContentDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [materialToDelete, setMaterialToDelete] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [contentSaving, setContentSaving] = useState(false);
+  const [contentError, setContentError] = useState("");
+  const [editForm, setEditForm] = useState({
+    title: "",
+    categoryId: "",
+    description: "",
+    urlVideo: "",
+  });
 
   const accumulateWatchTime = ({ keepRunning = false } = {}) => {
     if (!lastStartedAtRef.current) return;
@@ -102,6 +114,21 @@ export default function VideoView() {
 
     recordInitialView();
   }, [content.id]);
+
+  useEffect(() => {
+    if (!canEditContent) return;
+
+    const loadCategories = async () => {
+      try {
+        const data = await CategoryService.getAll();
+        setCategories(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error cargando categorias:", error);
+      }
+    };
+
+    loadCategories();
+  }, [canEditContent]);
 
   useEffect(() => {
     const loadQuestions = async () => {
@@ -317,6 +344,60 @@ export default function VideoView() {
     }
   };
 
+  const openEditModal = () => {
+    const currentCategoryId =
+      content.category?.id ||
+      categories.find((item) => getCategoryLabel(item) === getCategoryLabel(content.category))?.id ||
+      "";
+
+    setEditForm({
+      title: content.title || "",
+      categoryId: currentCategoryId ? String(currentCategoryId) : "",
+      description: content.description || "",
+      urlVideo: content.urlVideo || getContentUrl(content) || "",
+    });
+    setContentError("");
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+    setEditForm((current) => ({ ...current, [name]: value }));
+    setContentError("");
+  };
+
+  const handleContentUpdate = async (event) => {
+    event.preventDefault();
+    if (!content.id || contentSaving) return;
+
+    try {
+      setContentSaving(true);
+      setContentError("");
+
+      const updated = await VideoService.update(content.id, {
+        ...editForm,
+        createdById: content.createdBy?.id || currentUser?.userId,
+      });
+
+      setContent((current) => ({
+        ...current,
+        ...updated,
+        url: getContentUrl(updated) || editForm.urlVideo,
+        materials: Array.isArray(updated.materials) ? updated.materials : current.materials,
+      }));
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error actualizando contenido:", error);
+      setContentError(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "No se pudo actualizar el contenido."
+      );
+    } finally {
+      setContentSaving(false);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full font-display bg-background-light text-text-light-primary dark:bg-background-dark dark:text-text-dark-primary">
       <Sidebar />
@@ -344,18 +425,34 @@ export default function VideoView() {
                     </div>
                   </div>
 
-                  {canDeleteContent && (
-                    <button
-                      type="button"
-                      onClick={() => setIsDeleteModalOpen(true)}
-                      disabled={contentDeleting}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
-                    >
-                      <span className="material-symbols-outlined text-lg">
-                        {contentDeleting ? "hourglass_empty" : "delete"}
-                      </span>
-                      {contentDeleting ? "Eliminando..." : "Eliminar contenido"}
-                    </button>
+                  {(canEditContent || canDeleteContent) && (
+                    <div className="flex flex-wrap justify-end gap-3">
+                      {canEditContent && (
+                        <button
+                          type="button"
+                          onClick={openEditModal}
+                          disabled={contentDeleting || contentSaving}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <span className="material-symbols-outlined text-lg">edit</span>
+                          Editar contenido
+                        </button>
+                      )}
+
+                      {canDeleteContent && (
+                        <button
+                          type="button"
+                          onClick={() => setIsDeleteModalOpen(true)}
+                          disabled={contentDeleting}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+                        >
+                          <span className="material-symbols-outlined text-lg">
+                            {contentDeleting ? "hourglass_empty" : "delete"}
+                          </span>
+                          {contentDeleting ? "Eliminando..." : "Eliminar contenido"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -519,6 +616,113 @@ export default function VideoView() {
         </main>
       </div>
 
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            onClick={() => {
+              if (!contentSaving) setIsEditModalOpen(false);
+            }}
+            aria-label="Cerrar modal"
+          />
+
+          <div className="relative w-full max-w-3xl rounded-xl border border-border-light bg-card-light p-6 shadow-xl dark:border-border-dark dark:bg-card-dark">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
+                  Editar contenido
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  Actualiza la informacion principal del video.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={contentSaving}
+                className="inline-flex size-9 items-center justify-center rounded-lg bg-background-light text-text-light-secondary transition hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-background-dark dark:text-dark-secondary dark:hover:bg-primary/20"
+                aria-label="Cerrar"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleContentUpdate} className="grid gap-5 md:grid-cols-2">
+              <FormInput
+                label="Titulo"
+                name="title"
+                value={editForm.title}
+                onChange={handleEditChange}
+                disabled={contentSaving}
+              />
+
+              <FormSelect
+                label="Categoria"
+                name="categoryId"
+                value={editForm.categoryId}
+                onChange={handleEditChange}
+                disabled={contentSaving}
+                options={categories.map((item) => ({
+                  value: item.id,
+                  label: item.categoryName,
+                }))}
+              />
+
+              <div className="md:col-span-2">
+                <FormInput
+                  label="URL del video"
+                  name="urlVideo"
+                  value={editForm.urlVideo}
+                  onChange={handleEditChange}
+                  disabled={contentSaving}
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <FormTextarea
+                  label="Descripcion"
+                  name="description"
+                  value={editForm.description}
+                  onChange={handleEditChange}
+                  disabled={contentSaving}
+                  required={false}
+                />
+              </div>
+
+              {contentError && (
+                <p className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                  {contentError}
+                </p>
+              )}
+
+              <div className="md:col-span-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={contentSaving}
+                  className="rounded-lg bg-surface-light px-4 py-2 text-sm font-semibold transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-surface-dark dark:hover:bg-slate-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={contentSaving}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {contentSaving ? "hourglass_empty" : "save"}
+                  </span>
+                  {contentSaving ? "Guardando..." : "Guardar cambios"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
@@ -635,6 +839,57 @@ const MetaBadge = ({ icon, label }) => (
     <span className="material-symbols-outlined text-base text-primary">{icon}</span>
     <span className="truncate">{label}</span>
   </span>
+);
+
+const FormInput = ({ label, type = "text", required = true, disabled = false, ...props }) => (
+  <label className="flex flex-col gap-2">
+    <span className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+      {label}
+    </span>
+    <input
+      type={type}
+      required={required}
+      disabled={disabled}
+      className="input disabled:cursor-not-allowed disabled:opacity-60"
+      {...props}
+    />
+  </label>
+);
+
+const FormSelect = ({ label, options, required = true, disabled = false, ...props }) => (
+  <label className="flex flex-col gap-2">
+    <span className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+      {label}
+    </span>
+    <select
+      required={required}
+      disabled={disabled}
+      className="input disabled:cursor-not-allowed disabled:opacity-60"
+      {...props}
+    >
+      <option value="">Seleccionar...</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
+const FormTextarea = ({ label, required = true, disabled = false, rows = 4, ...props }) => (
+  <label className="flex flex-col gap-2">
+    <span className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+      {label}
+    </span>
+    <textarea
+      required={required}
+      disabled={disabled}
+      rows={rows}
+      className="input disabled:cursor-not-allowed disabled:opacity-60"
+      {...props}
+    />
+  </label>
 );
 
 const SupportButton = ({ title, meta, href, canDelete = false, isDeleting = false, onDelete }) => {

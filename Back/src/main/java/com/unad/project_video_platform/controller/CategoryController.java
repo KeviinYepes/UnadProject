@@ -4,6 +4,7 @@ import com.unad.project_video_platform.dto.ApiResponse;
 import com.unad.project_video_platform.entity.Category;
 import com.unad.project_video_platform.service.impl.ICategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -93,6 +94,13 @@ public class CategoryController {
         try {
             categoryService.deleteCategory(id);
             return ResponseEntity.ok(ApiResponse.<Void>ok("Category deleted successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<Void>badRequest(e.getMessage()));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<Void>badRequest(
+                            "No se puede eliminar la categoria porque tiene contenido o videos relacionados. Verifique o reasigne esos contenidos antes de eliminarla."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.<Void>notFound(e.getMessage()));

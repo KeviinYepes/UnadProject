@@ -207,7 +207,7 @@ export default function VideosLibrary() {
 
   const featuredCategories =
     categories.length > 0
-      ? categories.slice(0, 4).map((category) => category.categoryName)
+      ? categories.map((category) => category.categoryName).filter(Boolean)
       : ["Impuestos", "Salud", "Laboral", "Tramites Civiles"];
 
   const filteredTutorials = useMemo(() => {
