@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import Toast from "../components/Toast";
 import Pagination from "../components/Pagination";
+import ConfirmDialog from "../components/ConfirmDialog";
 import CategoryService from "../services/CategoryService";
 
 const Categories = () => {
@@ -12,6 +13,7 @@ const Categories = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState({
@@ -126,19 +128,24 @@ const Categories = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Estas seguro de eliminar esta categoria?")) return;
+  const handleDelete = async () => {
+    if (!categoryToDelete?.id) return;
 
     try {
       setLoading(true);
-      await CategoryService.delete(id);
+      await CategoryService.delete(categoryToDelete.id);
       showToast("Categoria eliminada correctamente.");
+      setCategoryToDelete(null);
       await cargarCategorias();
     } catch (error) {
       console.error(error);
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "No se pudo eliminar la categoria";
       showToast(
-        "Error al eliminar categoria: " +
-          (error.response?.data?.message || error.response?.data?.error || error.message),
+        "Error al eliminar categoria: " + message,
         "error"
       );
     } finally {
@@ -234,9 +241,9 @@ const Categories = () => {
                                 disabled={loading}
                               >
                                 Editar
-                              </button>
+                            </button>
                               <button
-                                onClick={() => handleDelete(category.id)}
+                                onClick={() => setCategoryToDelete(category)}
                                 className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-semibold"
                                 disabled={loading}
                               >
@@ -338,6 +345,14 @@ const Categories = () => {
           </div>
         </main>
       </div>
+      <ConfirmDialog
+        open={Boolean(categoryToDelete)}
+        title="Eliminar categoria"
+        message={`Estas seguro de eliminar la categoria "${categoryToDelete?.categoryName || ""}"? Esta accion no se puede deshacer.`}
+        loading={loading}
+        onCancel={() => setCategoryToDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

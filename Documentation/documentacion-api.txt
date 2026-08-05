@@ -1,0 +1,333 @@
+15. Documentacion de API
+
+El sistema expone servicios web REST que permiten autenticar usuarios, consultar contenidos, administrar categorias, gestionar usuarios, registrar estadisticas de visualizacion y manejar el foro de preguntas asociado a los videos.
+
+La URL base del backend es:
+
+http://localhost:8081
+
+En despliegue local con ngrok, esta URL puede cambiar por la URL publica generada por ngrok.
+
+Todas las respuestas JSON, excepto la descarga de archivos PDF, siguen la siguiente estructura general:
+
+{
+  "code": 200,
+  "status": "OK",
+  "message": "Operation successful",
+  "error": null,
+  "data": {}
+}
+
+Cuando un endpoint requiere autenticacion, se debe enviar el token JWT en el encabezado:
+
+Authorization: Bearer <token>
+
+
+15.1 Endpoint de Autenticacion
+
+Permite validar las credenciales de acceso del usuario.
+
+Metodo: POST
+Endpoint: /api/auth/login
+Seguridad: Publico
+
+Cuerpo de la peticion:
+
+{
+  "email": "andres.admin@email.com",
+  "documentNumber": "123456789"
+}
+
+Campos:
+
+email: string. Correo electronico del usuario.
+documentNumber: string. Numero de documento usado como clave de acceso.
+
+Respuesta exitosa:
+
+{
+  "code": 200,
+  "status": "OK",
+  "message": "Login successful",
+  "error": null,
+  "data": {
+    "token": "jwt_token_generado",
+    "tokenType": "Bearer",
+    "role": "ADMIN",
+    "userId": 1
+  }
+}
+
+El sistema tambien cuenta con recuperacion de contrasena mediante correo electronico.
+
+Metodo: POST
+Endpoint: /api/auth/recover-password
+Seguridad: Publico
+
+Cuerpo de la peticion:
+
+{
+  "email": "andres.admin@email.com"
+}
+
+Este servicio busca el usuario por correo y envia al email registrado la clave actual de acceso.
+
+
+15.2 Endpoints de Formularios o Categorias
+
+En el sistema, los formularios o modulos de contenido estan representados mediante categorias. Estas permiten agrupar los videos disponibles.
+
+GET /api/categories
+Descripcion: Consulta todas las categorias.
+Seguridad: Publico.
+
+GET /api/categories/{id}
+Descripcion: Consulta una categoria por ID.
+Seguridad: Publico.
+
+GET /api/categories/search?name=Salud
+Descripcion: Busca una categoria por nombre.
+Seguridad: Publico.
+
+GET /api/categories/exists?name=Salud
+Descripcion: Verifica si existe una categoria.
+Seguridad: Publico.
+
+POST /api/categories
+Descripcion: Crea una categoria.
+Seguridad: ADMIN.
+
+PUT /api/categories/{id}
+Descripcion: Actualiza una categoria.
+Seguridad: ADMIN.
+
+DELETE /api/categories/{id}
+Descripcion: Elimina una categoria.
+Seguridad: ADMIN.
+
+Ejemplo de respuesta:
+
+{
+  "code": 200,
+  "status": "OK",
+  "message": "Categories consulted",
+  "error": null,
+  "data": [
+    {
+      "id": 1,
+      "categoryName": "Salud",
+      "description": "Formularios relacionados con salud"
+    }
+  ]
+}
+
+
+15.3 Endpoints de Videos o Contenido
+
+Permiten consultar y administrar los videos instructivos del sistema. Cada video pertenece a una categoria y puede tener materiales PDF asociados.
+
+GET /api/content
+Descripcion: Consulta todos los videos.
+Seguridad: Publico.
+
+GET /api/content/{id}
+Descripcion: Consulta un video por ID.
+Seguridad: Publico.
+
+GET /api/content/materials/{storedFileName}
+Descripcion: Descarga o visualiza un PDF asociado.
+Seguridad: Publico.
+
+POST /api/content
+Descripcion: Crea un video.
+Seguridad: ADMIN, MODERATOR.
+
+POST /api/content/{id}/materials
+Descripcion: Agrega materiales PDF a un video.
+Seguridad: ADMIN, MODERATOR.
+
+DELETE /api/content/{id}/materials/{materialId}
+Descripcion: Elimina un material PDF.
+Seguridad: ADMIN, MODERATOR.
+
+PUT /api/content/{id}
+Descripcion: Actualiza un video.
+Seguridad: ADMIN.
+
+DELETE /api/content/{id}
+Descripcion: Elimina un video.
+Seguridad: ADMIN.
+
+Ejemplo de respuesta de un video:
+
+{
+  "id": 1,
+  "urlVideo": "https://www.youtube.com/watch?v=abc123",
+  "title": "Como diligenciar un formulario",
+  "description": "Guia paso a paso para completar el tramite",
+  "category": {
+    "id": 1,
+    "categoryName": "Tramites Civiles"
+  },
+  "createdAt": "2026-05-03T10:30:00",
+  "materials": [
+    {
+      "id": 1,
+      "driveFileId": "archivo.pdf",
+      "driveUrl": "/api/content/materials/archivo.pdf",
+      "fileName": "Guia.pdf",
+      "mimeType": "application/pdf",
+      "sizeBytes": 62000,
+      "position": 1
+    }
+  ]
+}
+
+
+15.4 Endpoints de Usuarios
+
+Estos servicios permiten administrar usuarios y consultar el perfil del usuario autenticado.
+
+GET /api/users/profile/current
+Descripcion: Consulta el perfil del usuario actual.
+Seguridad: Autenticado.
+
+PUT /api/users/profile/current
+Descripcion: Actualiza el perfil propio.
+Seguridad: Autenticado.
+
+GET /api/users
+Descripcion: Lista todos los usuarios.
+Seguridad: ADMIN.
+
+GET /api/users/{id}
+Descripcion: Consulta usuario por ID.
+Seguridad: ADMIN.
+
+GET /api/users/search/email?email=...
+Descripcion: Busca usuario por email.
+Seguridad: ADMIN.
+
+GET /api/users/search/document?documentNumber=...
+Descripcion: Busca usuario por documento.
+Seguridad: ADMIN.
+
+GET /api/users/role/{roleId}
+Descripcion: Lista usuarios por rol.
+Seguridad: ADMIN.
+
+POST /api/users
+Descripcion: Crea un usuario.
+Seguridad: ADMIN.
+
+PUT /api/users/{id}
+Descripcion: Actualiza un usuario.
+Seguridad: ADMIN.
+
+DELETE /api/users/{id}
+Descripcion: Elimina un usuario.
+Seguridad: ADMIN.
+
+
+15.5 Endpoints de Roles
+
+Permiten administrar los roles del sistema.
+
+GET /api/roles
+Descripcion: Lista todos los roles.
+Seguridad: ADMIN.
+
+GET /api/roles/{id}
+Descripcion: Consulta un rol por ID.
+Seguridad: ADMIN.
+
+GET /api/roles/search?name=ADMIN
+Descripcion: Busca rol por nombre.
+Seguridad: ADMIN.
+
+POST /api/roles
+Descripcion: Crea un rol.
+Seguridad: ADMIN.
+
+PUT /api/roles/{id}
+Descripcion: Actualiza un rol.
+Seguridad: ADMIN.
+
+DELETE /api/roles/{id}
+Descripcion: Elimina un rol.
+Seguridad: ADMIN.
+
+
+15.6 Endpoints de Foro
+
+Permiten crear preguntas o respuestas asociadas a los contenidos.
+
+GET /api/forum/conversations
+Descripcion: Lista conversaciones del foro.
+Seguridad: Autenticado.
+
+GET /api/forum/content/{contentId}/questions
+Descripcion: Lista preguntas de un video.
+Seguridad: Autenticado.
+
+GET /api/forum/notifications/{userId}
+Descripcion: Consulta notificaciones del usuario.
+Seguridad: Autenticado.
+
+POST /api/forum/questions
+Descripcion: Crea una pregunta o respuesta.
+Seguridad: Autenticado.
+
+Cuerpo de la peticion:
+
+{
+  "contentId": 1,
+  "userId": 2,
+  "title": "Duda sobre el formulario",
+  "description": "No entiendo el paso numero 3"
+}
+
+
+15.7 Endpoints de Estadisticas
+
+Permiten registrar y consultar estadisticas de visualizacion de videos.
+
+POST /api/content/stats/record
+Descripcion: Registra visualizacion desde contenido.
+Seguridad: Autenticado.
+
+POST /api/video-stats/record
+Descripcion: Registra estadistica de video.
+Seguridad: Autenticado.
+
+GET /api/video-stats
+Descripcion: Consulta todas las estadisticas.
+Seguridad: ADMIN.
+
+GET /api/video-stats/content/{contentId}
+Descripcion: Estadisticas por video.
+Seguridad: ADMIN.
+
+GET /api/video-stats/user/{userId}
+Descripcion: Estadisticas por usuario.
+Seguridad: ADMIN.
+
+Cuerpo de la peticion:
+
+{
+  "userId": 1,
+  "contentId": 3,
+  "watchTimeSeconds": 120,
+  "countView": true
+}
+
+
+15.8 Codigos de Respuesta
+
+200: Operacion exitosa.
+201: Recurso creado correctamente.
+400: Datos invalidos.
+401: Token ausente o invalido.
+403: Usuario sin permisos.
+404: Recurso no encontrado.
+500: Error interno del servidor.

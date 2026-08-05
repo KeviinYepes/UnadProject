@@ -146,7 +146,7 @@ public class ContentController {
         }
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Video>> updateContent(@PathVariable Integer id, @RequestBody Video content) {
         try {

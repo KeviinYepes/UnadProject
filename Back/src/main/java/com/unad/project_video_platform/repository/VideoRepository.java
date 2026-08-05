@@ -18,4 +18,6 @@ public interface VideoRepository extends JpaRepository<Video, Integer> {
     @Override
     @EntityGraph(attributePaths = {"category", "createdBy", "createdBy.role", "materials"})
     Optional<Video> findById(Integer id);
+
+    boolean existsByCategoryId(Integer categoryId);
 }
