@@ -42,6 +42,9 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "last_seen_notifications_at")
+    private LocalDateTime lastSeenNotificationsAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

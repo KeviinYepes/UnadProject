@@ -3,12 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import AuthService from '../services/AuthService';
 import ForumService from '../services/ForumService';
 
+const getProfilePhotoUrl = () => {
+  const currentUser = AuthService.getCurrentUser();
+  const storedPhoto = localStorage.getItem(`profilePhoto:${currentUser?.userId || "current"}`);
+
+  return (
+    storedPhoto ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.email || "Usuario")}&background=2563eb&color=fff&size=256`
+  );
+};
+
 export default function Header() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [notificationItems, setNotificationItems] = useState([]);
-  const [profilePhoto, setProfilePhoto] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState(getProfilePhotoUrl);
   const menuRef = useRef(null);
   const notificationRef = useRef(null);
   const navigate = useNavigate();
@@ -33,25 +43,20 @@ export default function Header() {
   };
 
   const loadProfilePhoto = () => {
-    const currentUser = AuthService.getCurrentUser();
-    const storedPhoto = localStorage.getItem(`profilePhoto:${currentUser?.userId || "current"}`);
-    setProfilePhoto(
-      storedPhoto ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.email || "Usuario")}&background=2563eb&color=fff&size=256`
-    );
+    setProfilePhoto(getProfilePhotoUrl());
   };
 
   useEffect(() => {
-    loadProfilePhoto();
     window.addEventListener('profile-photo-changed', loadProfilePhoto);
     return () => window.removeEventListener('profile-photo-changed', loadProfilePhoto);
   }, []);
 
   useEffect(() => {
-    loadNotifications();
+    const initialLoad = window.setTimeout(loadNotifications, 0);
     window.addEventListener('forum-notifications-changed', loadNotifications);
     window.addEventListener('focus', loadNotifications);
     return () => {
+      window.clearTimeout(initialLoad);
       window.removeEventListener('forum-notifications-changed', loadNotifications);
       window.removeEventListener('focus', loadNotifications);
     };
@@ -73,6 +78,30 @@ export default function Header() {
 
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen((current) => !current);
+  };
+
+  const openNotificationMenu = async () => {
+    setIsNotificationMenuOpen(true);
+    await loadNotifications();
+
+    const currentUser = AuthService.getCurrentUser();
+    if (!currentUser?.userId) return;
+
+    try {
+      await ForumService.markNotificationsSeen(currentUser.userId);
+      await loadNotifications();
+    } catch (error) {
+      console.error('Error marcando notificaciones como vistas:', error);
+    }
+  };
+
+  const toggleNotificationMenu = () => {
+    if (isNotificationMenuOpen) {
+      setIsNotificationMenuOpen(false);
+      return;
+    }
+
+    openNotificationMenu();
   };
 
   const goToProfile = () => {
@@ -103,15 +132,7 @@ export default function Header() {
         <div className="relative" ref={notificationRef}>
           <button
             type="button"
-            onClick={() => {
-              setIsNotificationMenuOpen((current) => {
-                const nextValue = !current;
-                if (nextValue) {
-                  loadNotifications();
-                }
-                return nextValue;
-              });
-            }}
+            onClick={toggleNotificationMenu}
             className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-background-light text-text-light-secondary transition-colors hover:bg-primary/10 hover:text-primary dark:bg-background-dark dark:text-dark-secondary dark:hover:bg-primary/20 dark:hover:text-primary"
           >
             <span className="material-symbols-outlined text-2xl">notifications</span>

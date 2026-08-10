@@ -57,9 +57,8 @@ public class ForumService implements IForumService {
     }
 
     public NotificationSummaryResponse getNotificationSummary(Integer userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new RuntimeException("Usuario no encontrado con id: " + userId);
-        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + userId));
 
         int contentQuestionCount = 0;
         int answerCount = 0;
@@ -88,11 +87,18 @@ public class ForumService implements IForumService {
                 continue;
             }
 
+            boolean isPending = user.getLastSeenNotificationsAt() == null
+                    || lastMessage.getCreatedAt().isAfter(user.getLastSeenNotificationsAt());
+
             if (ownsContent) {
-                contentQuestionCount++;
+                if (isPending) {
+                    contentQuestionCount++;
+                }
                 items.add(toNotificationItem(conversation, lastMessage, "CONTENT_QUESTION"));
             } else {
-                answerCount++;
+                if (isPending) {
+                    answerCount++;
+                }
                 items.add(toNotificationItem(conversation, lastMessage, "ANSWER"));
             }
         }
@@ -102,6 +108,14 @@ public class ForumService implements IForumService {
                 answerCount,
                 contentQuestionCount + answerCount,
                 items);
+    }
+
+    @Transactional
+    public void markNotificationsSeen(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + userId));
+        user.setLastSeenNotificationsAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
     }
 
     @Transactional

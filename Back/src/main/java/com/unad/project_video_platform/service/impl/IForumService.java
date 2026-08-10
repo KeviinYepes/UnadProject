@@ -14,5 +14,7 @@ public interface IForumService {
 
     NotificationSummaryResponse getNotificationSummary(Integer userId);
 
+    void markNotificationsSeen(Integer userId);
+
     Question createQuestion(QuestionRequest request);
 }

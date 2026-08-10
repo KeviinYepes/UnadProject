@@ -331,3 +331,23 @@ public class LoginRequest {
 **¡Listo para desarrollar! 🚀**
 
 Si necesitas agregar más funcionalidades o ajustar algo, no dudes en preguntar.
+
+## Actualizacion: foro, notificaciones y arbol de categorias
+
+### Servicios y componentes nuevos
+- `src/services/ForumService.js` incluye `markNotificationsSeen(userId)`.
+- `src/components/CategoryTreeFilter.jsx` muestra un arbol de dos niveles: categoria -> videos.
+- `src/pages/VideosLibrary.jsx` conserva el buscador por titulo y el ordenamiento, y reemplaza los chips horizontales por el arbol de categorias.
+
+### Endpoints de foro conectados
+- `GET /api/forum/conversations` -> ForumService.getConversations()
+- `GET /api/forum/content/{contentId}/questions` -> ForumService.getQuestionsByContent()
+- `GET /api/forum/notifications/{userId}` -> ForumService.getNotifications()
+- `PUT /api/forum/notifications/{userId}/seen` -> ForumService.markNotificationsSeen()
+- `POST /api/forum/questions` -> ForumService.createQuestion()
+
+### Comportamiento esperado
+- Al abrir la campana, el frontend marca las notificaciones como vistas y refresca el contador.
+- El historial del dropdown se conserva aunque el contador baje a 0.
+- Las preguntas o respuestas creadas despues del ultimo visto vuelven a contar como pendientes.
+- Al seleccionar una categoria del arbol se filtra la biblioteca; seleccionar el mismo nodo o "Todas las categorias" limpia el filtro.

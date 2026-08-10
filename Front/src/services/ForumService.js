@@ -16,6 +16,10 @@ const ForumService = {
     return response.data?.data || { contentQuestionCount: 0, answerCount: 0, total: 0 };
   },
 
+  markNotificationsSeen: async (userId) => {
+    return api.put(`/api/forum/notifications/${userId}/seen`);
+  },
+
   createQuestion: async ({ contentId, userId, title, description }) => {
     const response = await api.post("/api/forum/questions", {
       contentId,

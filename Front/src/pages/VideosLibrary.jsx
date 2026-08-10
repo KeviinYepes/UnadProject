@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import VideoCard from "../components/VideoCard";
 import Toast from "../components/Toast";
+import CategoryTreeFilter from "../components/CategoryTreeFilter";
 import AuthService from "../services/AuthService";
 import CategoryService from "../services/CategoryService";
 import VideoService from "../services/VideoService";
@@ -70,7 +71,7 @@ export default function VideosLibrary() {
     };
 
     loadDurations();
-  }, [videos]);
+  }, [videos, durations]);
 
   const cargarDatos = async () => {
     try {
@@ -205,11 +206,6 @@ export default function VideosLibrary() {
 
   const items = videos.map(toCardItem);
 
-  const featuredCategories =
-    categories.length > 0
-      ? categories.map((category) => category.categoryName).filter(Boolean)
-      : ["Impuestos", "Salud", "Laboral", "Tramites Civiles"];
-
   const filteredTutorials = useMemo(() => {
     const q = searchQuery
       .toLowerCase()
@@ -282,22 +278,22 @@ export default function VideosLibrary() {
               </div>
             )}
 
-            <label className="relative flex w-full max-w-md">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <span className="material-symbols-outlined text-xl text-text-light-secondary dark:text-dark-secondary">
-                  search
-                </span>
-              </div>
-              <input
-                className="form-input h-10 w-full flex-1 rounded-lg border-none bg-background-light pl-10 text-sm placeholder:text-text-light-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background-dark dark:placeholder:text-dark-secondary"
-                placeholder="Buscar contenido..."
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </label>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <label className="relative flex w-full max-w-md">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="material-symbols-outlined text-xl text-text-light-secondary dark:text-dark-secondary">
+                    search
+                  </span>
+                </div>
+                <input
+                  className="form-input h-10 w-full flex-1 rounded-lg border-none bg-background-light pl-10 text-sm placeholder:text-text-light-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background-dark dark:placeholder:text-dark-secondary"
+                  placeholder="Buscar contenido..."
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </label>
 
-            <div className="flex flex-wrap gap-2">
               <label className="relative h-9 shrink-0">
                 <select
                   value={sortBy}
@@ -312,75 +308,69 @@ export default function VideosLibrary() {
                   expand_more
                 </span>
               </label>
-
-              {featuredCategories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setSelectedCategory((current) => (current === category ? "" : category))}
-                  className={`flex h-9 shrink-0 items-center justify-center rounded-lg border px-4 transition-colors ${
-                    selectedCategory === category
-                      ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
-                      : "border-slate-300 bg-white hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-800"
-                  }`}
-                >
-                  <p className="text-sm font-medium">{category}</p>
-                </button>
-              ))}
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-8">
-              {loading && filteredTutorials.length === 0 ? (
-                <div className="col-span-full py-10 text-center text-text-light-secondary dark:text-dark-secondary">
-                  Cargando contenido...
-                </div>
-              ) : !error && videos.length === 0 ? (
-                <div className="col-span-full flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed border-border-light bg-card-light p-10 text-center dark:border-border-dark dark:bg-card-dark">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <span className="material-symbols-outlined text-3xl">video_library</span>
+            <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+              <CategoryTreeFilter
+                categories={categories}
+                videos={items}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+              />
+
+              <div className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-8">
+                {loading && filteredTutorials.length === 0 ? (
+                  <div className="col-span-full py-10 text-center text-text-light-secondary dark:text-dark-secondary">
+                    Cargando contenido...
                   </div>
-                  <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
-                    No hay contenido registrado
-                  </h2>
-                  <p className="mt-2 max-w-md text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                    Agrega tu primer contenido para que aparezca en la biblioteca de guias visuales.
-                  </p>
-                  {canManageContent && (
-                    <button
-                      type="button"
-                      onClick={handleOpenCreate}
-                      className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white shadow-md transition hover:bg-primary/90"
-                    >
-                      <span className="material-symbols-outlined text-lg">add</span>
-                      Agregar contenido
-                    </button>
-                  )}
-                </div>
-              ) : filteredTutorials.length === 0 ? (
-                <div className="col-span-full py-10 text-center text-text-light-secondary dark:text-dark-secondary">
-                  No hay contenido que coincida con la busqueda.
-                </div>
-              ) : (
-                filteredTutorials.map((tutorial, index) => (
-                  <Link
-                    key={tutorial.id ?? index}
-                    to="/video"
-                    state={tutorial}
-                    className="group block transition-transform duration-300 hover:scale-[1.03]"
-                  >
-                    <VideoCard
-                      title={tutorial.title}
-                      category={tutorial.category}
-                      duration={tutorial.duration}
-                      imageUrl={tutorial.imageUrl}
-                    />
-                    <div className="mt-2 flex items-center gap-1 text-sm font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                      <span className="material-symbols-outlined text-base">play_circle</span>
-                      Ver paso a paso
+                ) : !error && videos.length === 0 ? (
+                  <div className="col-span-full flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed border-border-light bg-card-light p-10 text-center dark:border-border-dark dark:bg-card-dark">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <span className="material-symbols-outlined text-3xl">video_library</span>
                     </div>
-                  </Link>
-                ))
-              )}
+                    <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
+                      No hay contenido registrado
+                    </h2>
+                    <p className="mt-2 max-w-md text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                      Agrega tu primer contenido para que aparezca en la biblioteca de guias visuales.
+                    </p>
+                    {canManageContent && (
+                      <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white shadow-md transition hover:bg-primary/90"
+                      >
+                        <span className="material-symbols-outlined text-lg">add</span>
+                        Agregar contenido
+                      </button>
+                    )}
+                  </div>
+                ) : filteredTutorials.length === 0 ? (
+                  <div className="col-span-full py-10 text-center text-text-light-secondary dark:text-dark-secondary">
+                    No hay contenido que coincida con la busqueda.
+                  </div>
+                ) : (
+                  filteredTutorials.map((tutorial, index) => (
+                    <Link
+                      key={tutorial.id ?? index}
+                      to="/video"
+                      state={tutorial}
+                      className="group block transition-transform duration-300 hover:scale-[1.03]"
+                    >
+                      <VideoCard
+                        title={tutorial.title}
+                        category={tutorial.category}
+                        duration={tutorial.duration}
+                        imageUrl={tutorial.imageUrl}
+                      />
+                      <div className="mt-2 flex items-center gap-1 text-sm font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="material-symbols-outlined text-base">play_circle</span>
+                        Ver paso a paso
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
             </div>
 
             {canManageContent && isModalOpen && (
