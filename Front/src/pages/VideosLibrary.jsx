@@ -125,6 +125,10 @@ export default function VideosLibrary() {
     setError("");
 
     try {
+      if (!form.urlVideo.trim() && form.materials.length === 0) {
+        throw new Error("Agrega una URL de video o al menos un PDF como material de apoyo.");
+      }
+
       const currentUser = AuthService.getCurrentUser();
       if (!currentUser?.userId) {
         throw new Error("No se encontro el usuario actual. Vuelve a iniciar sesion.");
@@ -191,18 +195,24 @@ export default function VideosLibrary() {
     return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : fallbackImage;
   };
 
-  const toCardItem = (video) => ({
-    id: video.id,
-    title: video.title,
-    category: video.category?.categoryName || "Sin categoria",
-    createdBy: video.createdBy,
-    duration: durations[video.id] || "...",
-    imageUrl: getYouTubeThumbnail(video.urlVideo),
-    url: video.urlVideo,
-    description: video.description,
-    materials: video.materials || [],
-    createdAt: video.createdAt,
-  });
+  const toCardItem = (video) => {
+    const hasVideoUrl = Boolean(String(video.urlVideo || "").trim());
+    const isMaterialOnly = !hasVideoUrl && (video.materials || []).length > 0;
+
+    return {
+      id: video.id,
+      title: video.title,
+      category: video.category?.categoryName || "Sin categoria",
+      createdBy: video.createdBy,
+      duration: isMaterialOnly ? "PDF" : durations[video.id] || "...",
+      imageUrl: getYouTubeThumbnail(video.urlVideo),
+      url: video.urlVideo,
+      isMaterialOnly,
+      description: video.description,
+      materials: video.materials || [],
+      createdAt: video.createdAt,
+    };
+  };
 
   const items = videos.map(toCardItem);
 
@@ -362,10 +372,13 @@ export default function VideosLibrary() {
                         category={tutorial.category}
                         duration={tutorial.duration}
                         imageUrl={tutorial.imageUrl}
+                        isMaterialOnly={tutorial.isMaterialOnly}
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="material-symbols-outlined text-base">play_circle</span>
-                        Ver paso a paso
+                        <span className="material-symbols-outlined text-base">
+                          {tutorial.isMaterialOnly ? "picture_as_pdf" : "play_circle"}
+                        </span>
+                        {tutorial.isMaterialOnly ? "Ver material de apoyo" : "Ver paso a paso"}
                       </div>
                     </Link>
                   ))
@@ -389,7 +402,7 @@ export default function VideosLibrary() {
                         Agregar contenido multimedia
                       </h2>
                       <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-                        Completa la informacion del contenido.
+                        Completa la informacion del contenido. Puedes registrar solo PDFs si no hay video.
                       </p>
                     </div>
 
@@ -444,6 +457,7 @@ export default function VideosLibrary() {
                         onChange={handleChange}
                         disabled={loading}
                         placeholder="https://..."
+                        required={false}
                       />
                     </div>
 

@@ -1,4 +1,4 @@
-export default function VideoCard({ title, category, duration, imageUrl }) {
+export default function VideoCard({ title, category, duration, imageUrl, isMaterialOnly = false }) {
   const fallbackImage =
     "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=500&auto=format&fit=crop";
 
@@ -19,7 +19,7 @@ export default function VideoCard({ title, category, duration, imageUrl }) {
               className="material-symbols-outlined text-3xl text-primary"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
-              play_arrow
+              {isMaterialOnly ? "picture_as_pdf" : "play_arrow"}
             </span>
           </div>
         </div>

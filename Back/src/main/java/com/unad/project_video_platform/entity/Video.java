@@ -23,7 +23,7 @@ public class Video {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "url_video", nullable = false, length = 500)
+    @Column(name = "url_video", length = 500)
     private String urlVideo;
 
     @Column(name = "title", nullable = false, length = 255)

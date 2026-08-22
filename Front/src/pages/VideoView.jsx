@@ -25,7 +25,9 @@ export default function VideoView() {
   const canManageMaterials = normalizeRole(currentUser?.role) !== "USER";
   const canEditContent = ["ADMIN", "MODERATOR"].includes(normalizeRole(currentUser?.role));
   const canDeleteContent = normalizeRole(currentUser?.role) === "ADMIN";
-  const videoId = getYouTubeVideoId(getContentUrl(content));
+  const contentUrl = getContentUrl(content);
+  const hasVideoUrl = Boolean(contentUrl.trim());
+  const videoId = getYouTubeVideoId(contentUrl);
   const playerRef = useRef(null);
   const playerContainerRef = useRef(null);
   const isPlayingRef = useRef(false);
@@ -371,6 +373,10 @@ export default function VideoView() {
     if (!content.id || contentSaving) return;
 
     try {
+      if (!editForm.urlVideo.trim() && materials.length === 0) {
+        throw new Error("Agrega una URL de video o conserva al menos un PDF como material de apoyo.");
+      }
+
       setContentSaving(true);
       setContentError("");
 
@@ -460,6 +466,16 @@ export default function VideoView() {
                   {videoId ? (
                     <div className="aspect-video w-full">
                       <div ref={playerContainerRef} className="h-full w-full" title={title} />
+                    </div>
+                  ) : !hasVideoUrl ? (
+                    <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-surface-light p-8 text-center dark:bg-surface-dark">
+                      <span className="material-symbols-outlined text-5xl text-primary">picture_as_pdf</span>
+                      <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
+                        Contenido con material de apoyo
+                      </h2>
+                      <p className="max-w-md text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                        Este contenido no tiene video asociado. Revisa los PDFs disponibles en Material de apoyo.
+                      </p>
                     </div>
                   ) : (
                     <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-surface-light p-8 text-center dark:bg-surface-dark">
@@ -678,6 +694,7 @@ export default function VideoView() {
                   onChange={handleEditChange}
                   disabled={contentSaving}
                   placeholder="https://..."
+                  required={false}
                 />
               </div>
 

@@ -57,14 +57,16 @@ public class VideoService implements IVideoService {
 
     @Transactional
     public Video createVideo(Video video) {
-        validateVideo(video);
+        validateVideo(video, false);
         hydrateReferences(video);
         return videoRepository.save(video);
     }
 
     @Transactional
     public Video createVideo(Video video, MultipartFile[] materials) {
-        Video saved = createVideo(video);
+        validateVideo(video, hasUploadableMaterials(materials));
+        hydrateReferences(video);
+        Video saved = videoRepository.save(video);
         saveMaterials(saved, materials);
         return videoRepository.findById(saved.getId()).orElse(saved);
     }
@@ -102,7 +104,7 @@ public class VideoService implements IVideoService {
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Contenido no encontrado con id: " + id));
 
-        validateVideo(videoDetails);
+        validateVideo(videoDetails, hasSavedMaterials(video));
         hydrateReferences(videoDetails);
 
         video.setUrlVideo(videoDetails.getUrlVideo());
@@ -137,12 +139,13 @@ public class VideoService implements IVideoService {
         videoRepository.delete(video);
     }
 
-    private void validateVideo(Video video) {
+    private void validateVideo(Video video, boolean hasMaterials) {
         if (video == null) {
             throw new IllegalArgumentException("El contenido es obligatorio");
         }
-        if (video.getUrlVideo() == null || video.getUrlVideo().isBlank()) {
-            throw new IllegalArgumentException("La URL del video es obligatoria");
+        boolean hasVideoUrl = video.getUrlVideo() != null && !video.getUrlVideo().isBlank();
+        if (!hasVideoUrl && !hasMaterials) {
+            throw new IllegalArgumentException("Debes agregar una URL de video o al menos un PDF como material de apoyo");
         }
         if (video.getTitle() == null || video.getTitle().isBlank()) {
             throw new IllegalArgumentException("El titulo es obligatorio");
@@ -154,11 +157,29 @@ public class VideoService implements IVideoService {
             throw new IllegalArgumentException("El usuario creador es obligatorio");
         }
 
-        video.setUrlVideo(video.getUrlVideo().trim());
+        video.setUrlVideo(hasVideoUrl ? video.getUrlVideo().trim() : null);
         video.setTitle(video.getTitle().trim());
         if (video.getDescription() != null) {
             video.setDescription(video.getDescription().trim());
         }
+    }
+
+    private boolean hasUploadableMaterials(MultipartFile[] materials) {
+        if (materials == null || materials.length == 0) {
+            return false;
+        }
+
+        for (MultipartFile file : materials) {
+            if (file != null && !file.isEmpty()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean hasSavedMaterials(Video video) {
+        return video.getMaterials() != null && !video.getMaterials().isEmpty();
     }
 
     private void saveMaterials(Video video, MultipartFile[] materials) {
