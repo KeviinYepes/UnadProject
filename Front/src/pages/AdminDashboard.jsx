@@ -84,8 +84,13 @@ const AdminDashboard = () => {
     const frameDocument = frame.contentWindow?.document;
     if (!frameDocument) return;
 
+    const periodLabel =
+      selectedPeriod === "all"
+        ? "Todo el historico"
+        : periods.find((period) => period.key === selectedPeriod)?.label || selectedPeriod;
+
     frameDocument.open();
-    frameDocument.write(buildPdfReportHtml(analytics, selectedPeriod));
+    frameDocument.write(buildPdfReportHtml(analytics, periodLabel));
     frameDocument.close();
 
     frame.onload = () => {
@@ -930,7 +935,7 @@ const clampPage = (page, totalItems, pageSize) => {
   return Math.min(Math.max(1, page), totalPages);
 };
 
-const buildPdfReportHtml = (analytics, selectedPeriod) => {
+const buildPdfReportHtml = (analytics, periodLabel) => {
   const generatedAt = new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
     month: "long",
@@ -939,6 +944,8 @@ const buildPdfReportHtml = (analytics, selectedPeriod) => {
     minute: "2-digit",
   }).format(new Date());
 
+  const { metrics, videoRows, categoryRows, trendRows, insights, userRows } = analytics;
+
   return `
     <!doctype html>
     <html lang="es">
@@ -946,59 +953,239 @@ const buildPdfReportHtml = (analytics, selectedPeriod) => {
         <meta charset="utf-8" />
         <title>Reporte historico de metricas</title>
         <style>
-          @page { margin: 22mm 16mm; }
+          @page { margin: 18mm 14mm; }
           * { box-sizing: border-box; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
           body { color: #101922; font-family: Arial, sans-serif; margin: 0; }
-          h1 { font-size: 24px; margin: 0 0 6px; }
-          h2 { font-size: 16px; margin: 24px 0 8px; }
-          .subtitle { color: #5f6f82; font-size: 12px; margin-bottom: 20px; }
-          .metrics { display: grid; gap: 10px; grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; }
+          h1 { font-size: 22px; margin: 0 0 6px; }
+          h2 { font-size: 14px; margin: 0 0 2px; }
+          h3 { font-size: 10px; color: #5f6f82; font-weight: 400; margin: 0 0 10px; }
+          .subtitle { color: #5f6f82; font-size: 11px; margin-bottom: 18px; }
+          .metrics { display: grid; gap: 10px; grid-template-columns: repeat(4, 1fr); margin-bottom: 22px; }
           .metric { border: 1px solid #d9e2ec; border-radius: 8px; padding: 12px; }
-          .metric-label { color: #5f6f82; font-size: 10px; margin-bottom: 6px; }
-          .metric-value { font-size: 18px; font-weight: 700; }
-          table { border-collapse: collapse; font-size: 10px; width: 100%; }
-          th { background: #eef5ff; color: #2f5f9f; font-size: 9px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
-          th, td { border-bottom: 1px solid #d9e2ec; padding: 8px 6px; vertical-align: top; }
+          .metric-label { color: #5f6f82; font-size: 9px; margin-bottom: 6px; }
+          .metric-value { font-size: 17px; font-weight: 700; }
+          .metric-detail { color: #5f6f82; font-size: 9px; margin-top: 4px; }
+          .panel { border: 1px solid #d9e2ec; border-radius: 8px; padding: 14px; margin-bottom: 18px; break-inside: avoid; }
+          .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          table { border-collapse: collapse; font-size: 9.5px; width: 100%; }
+          th { background: #eef5ff; color: #2f5f9f; font-size: 8.5px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+          th, td { border-bottom: 1px solid #e5ebf1; padding: 7px 6px; vertical-align: top; }
           .right { text-align: right; }
+          .pill { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 8.5px; font-weight: 700; }
+          .pill-alto { background: #d1fae5; color: #047857; }
+          .pill-medio { background: #dbeafe; color: #1d4ed8; }
+          .pill-bajo { background: #fef3c7; color: #b45309; }
+          .pill-sinuso { background: #fee2e2; color: #b91c1c; }
+          .trend { display: flex; gap: 6px; height: 110px; }
+          .trend-col { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+          .trend-bar { width: 60%; min-height: 2px; background: #2563eb; border-radius: 3px 3px 0 0; }
+          .trend-label { font-size: 8px; color: #5f6f82; }
+          .hbar-row { margin-bottom: 10px; }
+          .hbar-head { display: flex; justify-content: space-between; font-size: 9.5px; margin-bottom: 3px; }
+          .hbar-track { height: 7px; background: #eef2f6; border-radius: 999px; }
+          .hbar-fill { height: 7px; background: #2563eb; border-radius: 999px; }
+          .insight { border: 1px solid #e5ebf1; border-radius: 6px; padding: 9px 10px; margin-bottom: 8px; }
+          .insight-title { font-size: 10px; font-weight: 700; margin-bottom: 2px; }
+          .insight-text { font-size: 9.5px; color: #445064; line-height: 1.4; }
+          .rank { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f3f7; font-size: 9.5px; }
+          .rank:last-child { border-bottom: none; }
+          .rank-index { flex-shrink: 0; width: 18px; height: 18px; border-radius: 6px; background: #eef5ff; color: #2f5f9f; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+          .empty { color: #7c879e; font-size: 9.5px; font-style: italic; }
         </style>
       </head>
       <body>
         <h1>Reporte historico de metricas</h1>
-        <div class="subtitle">Periodo: ${escapeHtml(selectedPeriod === "all" ? "Todo el historico" : selectedPeriod)} | Generado el ${escapeHtml(generatedAt)}</div>
+        <div class="subtitle">Periodo: ${escapeHtml(periodLabel)} | Generado el ${escapeHtml(generatedAt)}</div>
+
         <section class="metrics">
-          <div class="metric"><div class="metric-label">Visualizaciones</div><div class="metric-value">${analytics.metrics.totalViews}</div></div>
-          <div class="metric"><div class="metric-label">Usuarios unicos</div><div class="metric-value">${analytics.metrics.uniqueViewers}</div></div>
-          <div class="metric"><div class="metric-label">Tiempo visto</div><div class="metric-value">${formatHours(analytics.metrics.watchTimeSeconds)}</div></div>
-          <div class="metric"><div class="metric-label">Cobertura</div><div class="metric-value">${analytics.metrics.viewerCoverage}%</div></div>
+          <div class="metric">
+            <div class="metric-label">Visualizaciones</div>
+            <div class="metric-value">${metrics.totalViews.toLocaleString("es-CO")}</div>
+            <div class="metric-detail">${metrics.uniqueViewers} usuarios unicos</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Tiempo visto</div>
+            <div class="metric-value">${escapeHtml(formatHours(metrics.watchTimeSeconds))}</div>
+            <div class="metric-detail">${metrics.avgMinutesPerView} min por vista</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Contenido con uso</div>
+            <div class="metric-value">${metrics.contentWithViews}/${metrics.totalContent}</div>
+            <div class="metric-detail">${metrics.contentWithoutViews} sin visualizaciones</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Usuarios activos</div>
+            <div class="metric-value">${metrics.activeUsers.toLocaleString("es-CO")}</div>
+            <div class="metric-detail">${metrics.viewerCoverage}% han visto contenido</div>
+          </div>
         </section>
-        <h2>Contenido</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Contenido</th><th>Categoria</th><th>Tipo</th><th class="right">Vistas</th><th class="right">Usuarios</th><th class="right">Tiempo</th><th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${analytics.videoRows
-              .map(
-                (row) => `
-                  <tr>
-                    <td>${escapeHtml(row.title)}</td>
-                    <td>${escapeHtml(row.category)}</td>
-                    <td>${escapeHtml(row.type)}</td>
-                    <td class="right">${row.views}</td>
-                    <td class="right">${row.uniqueUsers}</td>
-                    <td class="right">${escapeHtml(formatMinutes(row.watchTimeSeconds))}</td>
-                    <td>${escapeHtml(row.status)}</td>
-                  </tr>
-                `
-              )
-              .join("")}
-          </tbody>
-        </table>
+
+        <div class="two-col">
+          <div class="panel">
+            <h2>Tendencia mensual</h2>
+            <h3>Visualizaciones registradas por mes</h3>
+            ${buildTrendChartHtml(trendRows)}
+          </div>
+          <div class="panel">
+            <h2>Categorias con mayor uso</h2>
+            <h3>Participacion por visualizaciones</h3>
+            ${buildCategoryBarsHtml(categoryRows.slice(0, 6))}
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Rendimiento por contenido</h2>
+          <h3>Ranking accionable para priorizar mejoras</h3>
+          ${buildContentTableHtml(videoRows)}
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <h2>Lecturas rapidas</h2>
+            <h3>Hallazgos utiles del periodo</h3>
+            ${buildInsightsHtml(insights)}
+          </div>
+          <div class="panel">
+            <h2>Top usuarios</h2>
+            <h3>Personas con mayor actividad</h3>
+            ${buildTopUsersHtml(userRows.slice(0, 10))}
+          </div>
+        </div>
       </body>
     </html>
   `;
+};
+
+const buildTrendChartHtml = (trendRows) => {
+  if (trendRows.length === 0) {
+    return `<p class="empty">No hay datos historicos para graficar.</p>`;
+  }
+
+  const max = Math.max(...trendRows.map((row) => row.views), 1);
+
+  return `
+    <div class="trend">
+      ${trendRows
+        .map((row) => {
+          const heightPct = Math.max(4, Math.round((row.views / max) * 100));
+          return `
+            <div class="trend-col">
+              <div style="font-size:8px;color:#2563eb;font-weight:700;">${row.views}</div>
+              <div class="trend-bar" style="height:${heightPct}%;"></div>
+              <div class="trend-label">${escapeHtml(row.shortLabel)}</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+};
+
+const buildCategoryBarsHtml = (categoryRows) => {
+  if (categoryRows.length === 0) {
+    return `<p class="empty">Todavia no hay visualizaciones por categoria.</p>`;
+  }
+
+  const max = Math.max(...categoryRows.map((row) => row.views), 1);
+
+  return categoryRows
+    .map((row) => {
+      const widthPct = Math.max(4, Math.round((row.views / max) * 100));
+      return `
+        <div class="hbar-row">
+          <div class="hbar-head">
+            <span>${escapeHtml(row.category)}</span>
+            <strong>${row.views.toLocaleString("es-CO")}</strong>
+          </div>
+          <div class="hbar-track"><div class="hbar-fill" style="width:${widthPct}%;"></div></div>
+        </div>
+      `;
+    })
+    .join("");
+};
+
+const buildContentTableHtml = (videoRows) => {
+  if (videoRows.length === 0) {
+    return `<p class="empty">No hay contenido registrado para mostrar estadisticas.</p>`;
+  }
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Contenido</th><th>Categoria</th><th>Tipo</th><th class="right">Vistas</th>
+          <th class="right">Usuarios</th><th class="right">Tiempo</th><th>Ultima actividad</th><th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${videoRows
+          .map(
+            (row) => `
+              <tr>
+                <td>${escapeHtml(row.title)}</td>
+                <td>${escapeHtml(row.category)}</td>
+                <td>${escapeHtml(row.type)}</td>
+                <td class="right">${row.views.toLocaleString("es-CO")}</td>
+                <td class="right">${row.uniqueUsers}</td>
+                <td class="right">${escapeHtml(formatMinutes(row.watchTimeSeconds))}</td>
+                <td>${escapeHtml(formatDate(row.lastViewAt))}</td>
+                <td>${buildStatusPillHtml(row.status)}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+};
+
+const buildStatusPillHtml = (status) => {
+  const classByStatus = {
+    Alto: "pill-alto",
+    Medio: "pill-medio",
+    Bajo: "pill-bajo",
+    "Sin uso": "pill-sinuso",
+  };
+
+  return `<span class="pill ${classByStatus[status] || "pill-bajo"}">${escapeHtml(status)}</span>`;
+};
+
+const buildInsightsHtml = (insights) => {
+  if (insights.length === 0) {
+    return `<p class="empty">No hay hallazgos para este periodo.</p>`;
+  }
+
+  return insights
+    .map(
+      (insight) => `
+        <div class="insight">
+          <div class="insight-title">${escapeHtml(insight.title)}</div>
+          <div class="insight-text">${escapeHtml(insight.text)}</div>
+        </div>
+      `
+    )
+    .join("");
+};
+
+const buildTopUsersHtml = (userRows) => {
+  if (userRows.length === 0) {
+    return `<p class="empty">No hay actividad de usuarios en este periodo.</p>`;
+  }
+
+  return userRows
+    .map(
+      (user, index) => `
+        <div class="rank">
+          <div class="rank-index">${index + 1}</div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:700;">${escapeHtml(user.name)}</div>
+            <div style="color:#5f6f82;font-size:8.5px;">${user.views} vistas | ${escapeHtml(formatMinutes(user.watchTimeSeconds))}</div>
+          </div>
+        </div>
+      `
+    )
+    .join("");
 };
 
 const escapeHtml = (value) =>

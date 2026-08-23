@@ -334,7 +334,7 @@ export default function VideoView() {
     try {
       setContentDeleting(true);
       await VideoService.delete(content.id);
-      navigate("/admin/videos", { replace: true });
+      navigate("/admin/biblioteca", { replace: true });
     } catch (error) {
       console.error("Error eliminando contenido:", error);
       setMaterialError(
@@ -416,7 +416,7 @@ export default function VideoView() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex-1">
                     <Link
-                      to="/admin/videos"
+                      to="/admin/biblioteca"
                       className="mb-4 inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
                     >
                       <span className="material-symbols-outlined text-base">arrow_back</span>

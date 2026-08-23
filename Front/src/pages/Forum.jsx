@@ -61,10 +61,10 @@ export default function Forum() {
                 )}
               </div>
               <Link
-                to="/admin/videos"
+                to="/admin/biblioteca"
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-all hover:opacity-90"
               >
-                <span className="material-symbols-outlined text-base">video_library</span>
+                <span className="material-symbols-outlined text-base">library_books</span>
                 Ver contenidos
               </Link>
             </div>

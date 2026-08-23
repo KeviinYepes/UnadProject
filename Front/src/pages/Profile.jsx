@@ -90,7 +90,6 @@ const Profile = () => {
         requestError.response?.data?.error ||
         requestError.response?.data?.message ||
         "No se pudo guardar el perfil.";
-      setError(message);
       showToast(message, "error");
     } finally {
       setSaving(false);
