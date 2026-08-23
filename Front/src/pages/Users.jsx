@@ -118,7 +118,6 @@ const Users = () => {
       const apiMessage = error.response?.data?.error || error.response?.data?.message;
       const fallbackMessage = error.message || "Error al guardar usuario";
       const message = apiMessage || fallbackMessage;
-      setError(message);
       showToast("Error al guardar usuario: " + message, "error");
     } finally {
       setLoading(false);

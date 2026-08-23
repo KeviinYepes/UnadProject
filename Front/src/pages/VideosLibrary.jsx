@@ -5,9 +5,12 @@ import Header from "../components/Header";
 import VideoCard from "../components/VideoCard";
 import Toast from "../components/Toast";
 import CategoryTreeFilter from "../components/CategoryTreeFilter";
+import Pagination from "../components/Pagination";
 import AuthService from "../services/AuthService";
 import CategoryService from "../services/CategoryService";
 import VideoService from "../services/VideoService";
+
+const PAGE_SIZE = 12;
 
 export default function VideosLibrary() {
   const currentUser = AuthService.getCurrentUser();
@@ -15,6 +18,7 @@ export default function VideosLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [sortBy, setSortBy] = useState("recent");
+  const [currentPage, setCurrentPage] = useState(1);
   const [durations, setDurations] = useState({});
   const [videos, setVideos] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -151,7 +155,6 @@ export default function VideosLibrary() {
       const apiMessage = err.response?.data?.error || err.response?.data?.message;
       const fallbackMessage = err.message || "Error al guardar el contenido";
       const msg = apiMessage || fallbackMessage;
-      setError(msg);
       showToast("Error al guardar el contenido: " + msg, "error");
     } finally {
       setLoading(false);
@@ -250,6 +253,15 @@ export default function VideosLibrary() {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
   }, [searchQuery, selectedCategory, sortBy, items]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, sortBy]);
+
+  const paginatedTutorials = useMemo(
+    () => paginate(filteredTutorials, currentPage, PAGE_SIZE),
+    [filteredTutorials, currentPage]
+  );
 
   return (
     <div className="flex h-screen w-full font-display bg-background-light text-text-light-primary dark:bg-background-dark dark:text-text-dark-primary">
@@ -360,7 +372,7 @@ export default function VideosLibrary() {
                     No hay contenido que coincida con la busqueda.
                   </div>
                 ) : (
-                  filteredTutorials.map((tutorial, index) => (
+                  paginatedTutorials.map((tutorial, index) => (
                     <Link
                       key={tutorial.id ?? index}
                       to="/video"
@@ -385,6 +397,13 @@ export default function VideosLibrary() {
                 )}
               </div>
             </div>
+
+            <Pagination
+              page={currentPage}
+              totalItems={filteredTutorials.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
 
             {canManageContent && isModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -544,10 +563,11 @@ const FileInput = ({ label, files = [], disabled = false, ...props }) => (
         {files.map((file) => (
           <span
             key={`${file.name}-${file.size}`}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-900/20"
+            title={file.name}
+            className="inline-flex max-w-full items-center gap-1 rounded-lg bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-900/20 sm:max-w-xs"
           >
-            <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-            {file.name}
+            <span className="material-symbols-outlined shrink-0 text-sm">picture_as_pdf</span>
+            <span className="min-w-0 truncate">{file.name}</span>
           </span>
         ))}
       </div>
@@ -647,3 +667,8 @@ const normalizeRole = (role) =>
   String(role || "USER")
     .replace(/^ROLE_/i, "")
     .toUpperCase();
+
+const paginate = (items, page, pageSize) => {
+  const start = (page - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+};

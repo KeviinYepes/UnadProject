@@ -121,7 +121,6 @@ const Roles = () => {
       const apiMessage = error.response?.data?.error || error.response?.data?.message;
       const fallbackMessage = error.message || "Error al guardar rol";
       const message = apiMessage || fallbackMessage;
-      setError(message);
       showToast("Error al guardar rol: " + message, "error");
     } finally {
       setLoading(false);

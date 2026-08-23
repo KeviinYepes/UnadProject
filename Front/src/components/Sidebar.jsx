@@ -7,11 +7,10 @@ export default function Sidebar() {
   
   const navItems = [
     { path: '/admin/dashboard', icon: 'dashboard', label: 'Panel Admin', roles: ['ADMIN'] },
-    { path: '/admin/historico', icon: 'monitoring', label: 'Historico', roles: ['ADMIN'] },
     { path: '/admin/users', icon: 'group', label: 'Usuarios', roles: ['ADMIN'] },
     { path: '/admin/roles', icon: 'admin_panel_settings', label: 'Roles', roles: ['ADMIN'] },
     { path: '/admin/categories', icon: 'category', label: 'Categorias', roles: ['ADMIN'] },
-    { path: '/admin/videos', icon: 'video_library', label: 'Videos', roles: ['ADMIN', 'USER', 'MODERATOR'] },
+    { path: '/admin/biblioteca', icon: 'library_books', label: 'Biblioteca', roles: ['ADMIN', 'USER', 'MODERATOR'] },
     { path: '/foro', icon: 'forum', label: 'Foro', roles: ['ADMIN', 'USER', 'MODERATOR'] },
   ].filter((item) => item.roles.includes(currentRole));
 

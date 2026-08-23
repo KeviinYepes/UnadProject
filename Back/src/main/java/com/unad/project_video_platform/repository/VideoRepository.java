@@ -20,4 +20,8 @@ public interface VideoRepository extends JpaRepository<Video, Integer> {
     Optional<Video> findById(Integer id);
 
     boolean existsByCategoryId(Integer categoryId);
+
+    boolean existsByTitleIgnoreCase(String title);
+
+    boolean existsByTitleIgnoreCaseAndIdNot(String title, Integer id);
 }

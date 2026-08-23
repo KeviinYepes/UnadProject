@@ -121,7 +121,6 @@ const Categories = () => {
       const apiMessage = error.response?.data?.error || error.response?.data?.message;
       const fallbackMessage = error.message || "Error al guardar categoria";
       const message = apiMessage || fallbackMessage;
-      setError(message);
       showToast("Error al guardar categoria: " + message, "error");
     } finally {
       setLoading(false);

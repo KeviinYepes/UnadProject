@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     const hasAccess = allowedRoles.map(normalizeRole).includes(currentRole);
 
     if (!hasAccess) {
-      return <Navigate to="/admin/videos" replace />;
+      return <Navigate to="/admin/biblioteca" replace />;
     }
   }
 
