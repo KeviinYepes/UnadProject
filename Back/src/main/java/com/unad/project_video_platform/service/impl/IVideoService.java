@@ -36,5 +36,5 @@ public interface IVideoService {
     /**
      * Crea un contenido subiendo un archivo (imagen o PDF)
      */
-    Video createFromUpload(MultipartFile file, String title, String description, String category, String type);
+    Video createFromUpload(MultipartFile file, String title, String description, String category, String type, MultipartFile thumbnail);
 }

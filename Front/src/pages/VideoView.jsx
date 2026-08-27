@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
+import ContentThumbnail from '../components/ContentThumbnail';
 import { API_BASE_URL } from '../config/api';
 
 function getYoutubeEmbed(url) {
@@ -19,6 +20,9 @@ export default function VideoView() {
   const embedUrl = getYoutubeEmbed(tutorial.url);
   const type = (tutorial.type || 'VIDEO').toUpperCase();
   const contentUrl = tutorial.url?.startsWith('/') ? `${API_BASE_URL}${tutorial.url}` : tutorial.url;
+  const thumbUrl = tutorial.thumbnailUrl?.startsWith('/')
+    ? `${API_BASE_URL}${tutorial.thumbnailUrl}`
+    : tutorial.thumbnailUrl;
 
   return (
     <div className="font-display bg-background-light text-[#0d141b] dark:bg-background-dark dark:text-slate-200 transition-colors duration-300">
@@ -77,42 +81,74 @@ export default function VideoView() {
                       className="max-h-[70vh] w-full object-contain"
                     />
                   </div>
-                ) : type === 'PDF' ? (
+                ) : type === 'PDF' && !thumbUrl ? (
                   <div className="aspect-video overflow-hidden rounded-2xl bg-white shadow-2xl">
                     <iframe className="h-full w-full" src={contentUrl} title={tutorial.title || 'PDF'} />
                   </div>
-                ) : embedUrl ? (
-                  <div className="aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl">
-                    <iframe
-                      className="h-full w-full"
-                      src={embedUrl}
-                      title={tutorial.title || 'Video'}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : (
-                  <div className="group relative overflow-hidden rounded-2xl bg-black shadow-2xl">
-                    <div
-                      className="relative aspect-video flex items-center justify-center bg-cover bg-center transition-transform duration-500 group-hover:scale-105 opacity-80"
-                      style={{
-                        backgroundImage: `url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1200')`,
-                      }}
-                    >
-                      <button className="flex size-20 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-primary/40 backdrop-blur-sm transition-all hover:scale-110 active:scale-95">
-                        <span className="material-symbols-outlined !text-5xl fill">play_arrow</span>
-                      </button>
+                ) : type === 'VIDEO' ? (
+                  embedUrl ? (
+                    <div className="aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl">
+                      <iframe
+                        className="h-full w-full"
+                        src={embedUrl}
+                        title={tutorial.title || 'Video'}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
                     </div>
-                    {contentUrl && (
+                  ) : (
+                    <div className="group relative overflow-hidden rounded-2xl bg-black shadow-2xl">
+                      <div
+                        className="relative aspect-video flex items-center justify-center bg-cover bg-center transition-transform duration-500 group-hover:scale-105 opacity-80"
+                        style={{
+                          backgroundImage: `url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1200')`,
+                        }}
+                      >
+                        <button className="flex size-20 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-primary/40 backdrop-blur-sm transition-all hover:scale-110 active:scale-95">
+                          <span className="material-symbols-outlined !text-5xl fill">play_arrow</span>
+                        </button>
+                      </div>
+                      {contentUrl && (
+                        <a
+                          href={contentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-6 py-4 text-center text-sm font-bold text-white hover:text-primary"
+                        >
+                          Abrir contenido
+                        </a>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  <div className="rounded-2xl border border-border-light bg-white p-6 shadow-2xl dark:border-border-dark dark:bg-slate-900">
+                    <div className="mx-auto max-w-xl overflow-hidden rounded-xl">
+                      {thumbUrl ? (
+                        <img src={thumbUrl} alt={tutorial.title || 'Vista previa'} className="w-full object-contain" />
+                      ) : (
+                        <div className="aspect-video">
+                          <ContentThumbnail type={type} url={contentUrl} thumbnailUrl={null} title={tutorial.title} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-5 flex flex-col items-center gap-3">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {type === 'PDF'
+                          ? 'Documento PDF'
+                          : type === 'EXCEL'
+                            ? 'Hoja de cálculo (Excel)'
+                            : 'Documento (Word)'}
+                      </p>
                       <a
                         href={contentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-6 py-4 text-center text-sm font-bold text-white hover:text-primary"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-bold text-white shadow-md hover:bg-primary/90"
                       >
-                        Abrir contenido
+                        <span className="material-symbols-outlined">open_in_new</span>
+                        Abrir / Descargar documento
                       </a>
-                    )}
+                    </div>
                   </div>
                 )}
 

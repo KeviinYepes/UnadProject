@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -39,10 +40,17 @@ public class FileStorageService {
             throw new IllegalArgumentException("El archivo está vacío");
         }
         String contentType = file.getContentType();
+        List<String> documentTypes = List.of(
+                "application/pdf",
+                "application/msword",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
         boolean allowed = contentType != null
-                && (contentType.startsWith("image/") || "application/pdf".equalsIgnoreCase(contentType));
+                && (contentType.startsWith("image/") || documentTypes.stream().anyMatch(t -> t.equalsIgnoreCase(contentType)));
         if (!allowed) {
-            throw new IllegalArgumentException("Solo se permiten imágenes o archivos PDF");
+            throw new IllegalArgumentException("Solo se permiten imágenes, PDF, Excel o Word");
         }
         return doStore(file);
     }

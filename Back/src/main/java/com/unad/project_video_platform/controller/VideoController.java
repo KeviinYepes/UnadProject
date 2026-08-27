@@ -78,9 +78,10 @@ public class VideoController {
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "category", required = false) String category,
-            @RequestParam(value = "type", required = false) String type) {
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "thumbnail", required = false) MultipartFile thumbnail) {
         try {
-            Video created = videoService.createFromUpload(file, title, description, category, type);
+            Video created = videoService.createFromUpload(file, title, description, category, type, thumbnail);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.created("Contenido creado", created));
         } catch (IllegalArgumentException e) {

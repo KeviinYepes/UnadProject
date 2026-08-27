@@ -79,7 +79,7 @@ public class VideoService implements IVideoService {
      * Crea un contenido subiendo un archivo (imagen o PDF).
      */
     @Transactional
-    public Video createFromUpload(MultipartFile file, String title, String description, String category, String type) {
+    public Video createFromUpload(MultipartFile file, String title, String description, String category, String type, MultipartFile thumbnail) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("El título es obligatorio");
         }
@@ -91,6 +91,10 @@ public class VideoService implements IVideoService {
         video.setDescription(description);
         video.setCategory(category);
         video.setType(normalizeType(type));
+
+        if (thumbnail != null && !thumbnail.isEmpty()) {
+            video.setThumbnailUrl(fileStorageService.storeImage(thumbnail));
+        }
 
         return videoRepository.save(video);
     }
@@ -114,6 +118,8 @@ public class VideoService implements IVideoService {
         return switch (type.trim().toUpperCase()) {
             case "PDF" -> "PDF";
             case "IMAGE", "IMAGEN", "FOTO", "PHOTO" -> "IMAGE";
+            case "EXCEL", "XLSX", "XLS", "HOJA" -> "EXCEL";
+            case "WORD", "DOCX", "DOC", "DOCUMENTO" -> "WORD";
             default -> "VIDEO";
         };
     }

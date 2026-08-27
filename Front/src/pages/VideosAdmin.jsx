@@ -21,6 +21,7 @@ const VideosAdmin = () => {
   const [tags, setTags] = useState(["Capacitación"]);
   const [newTag, setNewTag] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedThumbnail, setSelectedThumbnail] = useState(null);
 
   /* ================== CARGAR VIDEOS ================== */
   useEffect(() => {
@@ -72,12 +73,13 @@ const VideosAdmin = () => {
         await VideoService.update(editingVideo.id, videoData);
         alert("Contenido actualizado correctamente");
       } else if (selectedFile && form.type !== "VIDEO") {
-        // Subir archivo (PDF o imagen)
+        // Subir archivo (PDF, Excel, Word o imagen)
         await VideoService.upload(selectedFile, {
           title: form.title,
           description: form.description,
           category: form.category || "General",
           type: form.type,
+          thumbnail: selectedThumbnail || null,
         });
         alert("Contenido publicado correctamente");
       } else {
@@ -111,6 +113,7 @@ const VideosAdmin = () => {
     });
     setTags(video.tags || ["Capacitación"]);
     setSelectedFile(null);
+    setSelectedThumbnail(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -144,6 +147,7 @@ const VideosAdmin = () => {
     setTags(["Capacitación"]);
     setNewTag("");
     setSelectedFile(null);
+    setSelectedThumbnail(null);
   };
 
   const handleDiscard = () => {
@@ -231,6 +235,8 @@ const VideosAdmin = () => {
                     <option value="VIDEO">Video</option>
                     <option value="PDF">PDF</option>
                     <option value="IMAGE">Imagen</option>
+                    <option value="EXCEL">Excel</option>
+                    <option value="WORD">Word</option>
                   </select>
                 </div>
                 <Input
@@ -298,20 +304,38 @@ const VideosAdmin = () => {
               />
 
               {form.type !== "VIDEO" && (
-                <div>
-                  <label className="text-sm font-semibold">Subir archivo (PDF o imagen)</label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    disabled={loading}
-                    className="input"
-                  />
-                  {selectedFile && (
-                    <p className="mt-2 text-sm font-semibold text-primary">
-                      Archivo seleccionado: {selectedFile.name}
-                    </p>
-                  )}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold">Subir archivo (PDF, Excel, Word o imagen)</label>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf,.xlsx,.xls,.docx,.doc"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      disabled={loading}
+                      className="input"
+                    />
+                    {selectedFile && (
+                      <p className="mt-2 text-sm font-semibold text-primary">
+                        Archivo seleccionado: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold">Imagen de preview (opcional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setSelectedThumbnail(e.target.files?.[0] || null)}
+                      disabled={loading}
+                      className="input"
+                    />
+                    {selectedThumbnail && (
+                      <p className="mt-2 text-sm font-semibold text-primary">
+                        Preview seleccionado: {selectedThumbnail.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </section>
@@ -498,7 +522,11 @@ const Textarea = ({ label, disabled = false, ...props }) => (
 
 const tipoLabel = (t) => {
   const u = (t || "VIDEO").toUpperCase();
-  return u === "PDF" ? "PDF" : u === "IMAGE" ? "Imagen" : "Video";
+  return u === "PDF" ? "PDF"
+    : u === "IMAGE" ? "Imagen"
+    : u === "EXCEL" ? "Excel"
+    : u === "WORD" ? "Word"
+    : "Video";
 };
 
 export default VideosAdmin;

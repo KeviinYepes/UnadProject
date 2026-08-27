@@ -63,6 +63,9 @@ const VideoService = {
     formData.append("description", metadata.description || "");
     formData.append("category", metadata.category || "");
     formData.append("type", metadata.type || "VIDEO");
+    if (metadata.thumbnail) {
+      formData.append("thumbnail", metadata.thumbnail);
+    }
     const response = await api.post("/api/videos/upload", formData);
     return response.data.data || response.data;
   }
