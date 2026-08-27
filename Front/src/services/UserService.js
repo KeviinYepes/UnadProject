@@ -126,6 +126,40 @@ const UserService = {
     const response = await api.delete(`/api/users/${id}`);
     return response.data.data || response.data;
   },
+
+  /**
+   * Obtiene el perfil del usuario autenticado
+   */
+  getMe: async () => {
+    const response = await api.get("/api/users/me");
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Actualiza los datos del perfil del usuario autenticado
+   */
+  updateMe: async (data) => {
+    const response = await api.put("/api/users/me", data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Sube una nueva foto de perfil
+   */
+  uploadPhoto: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/api/users/me/photo", formData);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Cambia la contraseña del usuario autenticado
+   */
+  changePassword: async (data) => {
+    const response = await api.put("/api/users/me/password", data);
+    return response.data.data || response.data;
+  },
 };
 
 export default UserService;

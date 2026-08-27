@@ -1,13 +1,13 @@
 spring:
   application:
     name: project-video-platform
-  
+
   datasource:
     url: jdbc:postgresql://localhost:5434/video_platform
     username: admin
     password: admin123
     driver-class-name: org.postgresql.Driver
-  
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,9 +18,17 @@ spring:
         '[format_sql]': true
     open-in-view: false
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 jwt:
   secret: "change-this-secret-to-32-plus-characters-key-for-jwt-token-signature"
   expiration: 3600000
+
+app:
+  upload-dir: uploads
 
 server:
   port: 8080

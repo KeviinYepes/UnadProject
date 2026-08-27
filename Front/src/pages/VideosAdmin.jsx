@@ -12,12 +12,15 @@ const VideosAdmin = () => {
     title: "",
     description: "",
     url: "",
+    category: "",
+    type: "VIDEO",
     visibility: "internal",
     commentsEnabled: false,
   });
 
   const [tags, setTags] = useState(["Capacitación"]);
   const [newTag, setNewTag] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
 
   /* ================== CARGAR VIDEOS ================== */
   useEffect(() => {
@@ -63,24 +66,33 @@ const VideosAdmin = () => {
     setError("");
 
     try {
-      const videoData = { ...form, tags };
-
       if (editingVideo) {
-        // Actualizar video existente
+        // Actualizar contenido existente
+        const videoData = { ...form, tags };
         await VideoService.update(editingVideo.id, videoData);
-        alert("Video actualizado correctamente");
+        alert("Contenido actualizado correctamente");
+      } else if (selectedFile && form.type !== "VIDEO") {
+        // Subir archivo (PDF o imagen)
+        await VideoService.upload(selectedFile, {
+          title: form.title,
+          description: form.description,
+          category: form.category || "General",
+          type: form.type,
+        });
+        alert("Contenido publicado correctamente");
       } else {
-        // Crear nuevo video
+        // Crear contenido por URL (video u otro enlace)
+        const videoData = { ...form, tags, category: form.category || "General" };
         await VideoService.create(videoData);
-        alert("Video publicado correctamente");
+        alert("Contenido publicado correctamente");
       }
 
       resetForm();
       cargarVideos();
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Error al guardar el video");
-      alert("Error al guardar el video: " + (err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || "Error al guardar el contenido");
+      alert("Error al guardar el contenido: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -92,10 +104,13 @@ const VideosAdmin = () => {
       title: video.title || "",
       description: video.description || "",
       url: video.url || "",
+      category: video.category || "",
+      type: video.type || "VIDEO",
       visibility: video.visibility || "internal",
       commentsEnabled: video.commentsEnabled || false,
     });
     setTags(video.tags || ["Capacitación"]);
+    setSelectedFile(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -121,11 +136,14 @@ const VideosAdmin = () => {
       title: "",
       description: "",
       url: "",
+      category: "",
+      type: "VIDEO",
       visibility: "internal",
       commentsEnabled: false,
     });
     setTags(["Capacitación"]);
     setNewTag("");
+    setSelectedFile(null);
   };
 
   const handleDiscard = () => {
@@ -192,13 +210,38 @@ const VideosAdmin = () => {
               <SectionTitle icon="description" title="Información del Video" />
 
               <Input
-                label="Título del Video"
+                label="Título"
                 name="title"
                 value={form.title}
                 onChange={handleChange}
                 placeholder="Ej: Capacitación Seguridad 2026"
                 disabled={loading}
               />
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold">Tipo de contenido</label>
+                  <select
+                    name="type"
+                    value={form.type}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="input"
+                  >
+                    <option value="VIDEO">Video</option>
+                    <option value="PDF">PDF</option>
+                    <option value="IMAGE">Imagen</option>
+                  </select>
+                </div>
+                <Input
+                  label="Categoría"
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  placeholder="Ej: Capacitación, Trámites"
+                  disabled={loading}
+                />
+              </div>
 
               <Textarea
                 label="Descripción"
@@ -241,31 +284,36 @@ const VideosAdmin = () => {
               </div>
             </section>
 
-            {/* Fuente del Video */}
+            {/* Fuente del Contenido */}
             <section className="card p-6 space-y-6">
-              <SectionTitle icon="cloud_upload" title="Fuente del Video" />
+              <SectionTitle icon="cloud_upload" title="Fuente del Contenido" />
 
               <Input
-                label="URL del Video"
+                label={form.type === "VIDEO" ? "URL del Video" : "URL externa (opcional)"}
                 name="url"
                 value={form.url}
                 onChange={handleChange}
-                placeholder="YouTube, Vimeo o enlace interno"
+                placeholder={form.type === "VIDEO" ? "YouTube, Vimeo o enlace interno" : "https://..."}
                 disabled={loading}
               />
 
-              <div className="border-2 border-dashed border-border-light dark:border-border-dark rounded-xl p-8 text-center cursor-pointer hover:border-primary transition">
-                <span className="material-symbols-outlined text-4xl text-text-secondary-light dark:text-text-secondary-dark">
-                  upload_file
-                </span>
-                <p className="mt-2 font-semibold">
-                  Arrastra un archivo o haz clic para subir
-                </p>
-                <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                  MP4, MOV, WEBM (máx 500MB)
-                </p>
-                <input type="file" className="hidden" />
-              </div>
+              {form.type !== "VIDEO" && (
+                <div>
+                  <label className="text-sm font-semibold">Subir archivo (PDF o imagen)</label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    disabled={loading}
+                    className="input"
+                  />
+                  {selectedFile && (
+                    <p className="mt-2 text-sm font-semibold text-primary">
+                      Archivo seleccionado: {selectedFile.name}
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
           </div>
 
@@ -357,8 +405,8 @@ const VideosAdmin = () => {
               <thead className="bg-surface-light dark:bg-surface-dark text-xs uppercase font-bold tracking-wider text-text-secondary-light dark:text-text-secondary-dark">
                 <tr>
                   <th className="px-6 py-3">Título</th>
+                  <th className="px-6 py-3">Tipo</th>
                   <th className="px-6 py-3">URL</th>
-                  <th className="px-6 py-3">Visibilidad</th>
                   <th className="px-6 py-3 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -382,6 +430,7 @@ const VideosAdmin = () => {
                       className="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition"
                     >
                       <td className="px-6 py-4 font-semibold">{video.title}</td>
+                      <td className="px-6 py-4">{tipoLabel(video.type)}</td>
                       <td className="px-6 py-4 text-sm">
                         <a
                           href={video.url}
@@ -392,7 +441,6 @@ const VideosAdmin = () => {
                           {video.url?.substring(0, 40)}...
                         </a>
                       </td>
-                      <td className="px-6 py-4 capitalize">{video.visibility}</td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2">
                           <button
@@ -447,5 +495,10 @@ const Textarea = ({ label, disabled = false, ...props }) => (
     <textarea {...props} rows="4" className="input" disabled={disabled} />
   </div>
 );
+
+const tipoLabel = (t) => {
+  const u = (t || "VIDEO").toUpperCase();
+  return u === "PDF" ? "PDF" : u === "IMAGE" ? "Imagen" : "Video";
+};
 
 export default VideosAdmin;

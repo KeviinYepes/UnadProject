@@ -7,6 +7,7 @@ import com.unad.project_video_platform.repository.UserRepository;
 import com.unad.project_video_platform.security.JwtService;
 import com.unad.project_video_platform.service.impl.IAuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,14 +19,20 @@ public class AuthService implements IAuthService {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials: Email or password incorrect"));
+        if (request.getEmail() == null || request.getPassword() == null) {
+            throw new IllegalArgumentException("Credenciales inválidas: email y contraseña son obligatorios");
+        }
 
-        if (request.getDocumentNumber() == null
-            || !request.getDocumentNumber().equals(user.getDocumentNumber())) {
-            throw new IllegalArgumentException("Invalid credentials: Email or password incorrect");
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas: email o contraseña incorrectos"));
+
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Credenciales inválidas: email o contraseña incorrectos");
         }
 
         String roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";

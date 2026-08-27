@@ -1,30 +1,34 @@
-export default function VideoCard({ title, category, duration, imageUrl }) {
+import ContentThumbnail from './ContentThumbnail';
+
+export default function VideoCard({ title, category, type, url, thumbnailUrl, duration }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl bg-card-light p-3 transition-shadow hover:shadow-lg dark:bg-card-dark dark:hover:shadow-primary/10">
-      <div className="group relative aspect-video w-full">
-        <div
-          className="h-full w-full rounded-lg bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${imageUrl})` }}
-        />
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm">
-            <span
-              className="material-symbols-outlined text-3xl text-primary"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              play_arrow
-            </span>
-          </div>
-        </div>
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+        <ContentThumbnail type={type} url={url} thumbnailUrl={thumbnailUrl} title={title} />
       </div>
       <div>
         <p className="font-semibold leading-normal text-text-light-primary dark:text-text-dark-primary">
           {title}
         </p>
-        <p className="text-sm font-normal leading-normal text-text-light-secondary dark:text-text-dark-secondary">
-          {category} | {duration} min
-        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <TypeBadge type={type} />
+          <p className="text-sm font-normal leading-normal text-text-light-secondary dark:text-text-dark-secondary">
+            {category}{duration ? ` | ${duration}` : ''}
+          </p>
+        </div>
       </div>
     </div>
   );
+}
+
+function TypeBadge({ type }) {
+  const t = (type || 'VIDEO').toUpperCase();
+  const label = t === 'PDF' ? 'PDF' : t === 'IMAGE' ? 'Imagen' : 'Video';
+  const cls =
+    t === 'PDF'
+      ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400'
+      : t === 'IMAGE'
+        ? 'bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400'
+        : 'bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400';
+  return <span className={`rounded px-2 py-0.5 text-xs font-bold ${cls}`}>{label}</span>;
 }

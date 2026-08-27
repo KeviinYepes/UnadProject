@@ -49,6 +49,22 @@ const VideoService = {
   delete: async (id) => {
     const response = await api.delete(`/api/videos/${id}`);
     return response.data;
+  },
+
+  /**
+   * Sube un archivo (imagen o PDF) como contenido
+   * @param {File} file
+   * @param {Object} metadata - { title, description, category, type }
+   */
+  upload: async (file, metadata = {}) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", metadata.title || "");
+    formData.append("description", metadata.description || "");
+    formData.append("category", metadata.category || "");
+    formData.append("type", metadata.type || "VIDEO");
+    const response = await api.post("/api/videos/upload", formData);
+    return response.data.data || response.data;
   }
 };
 

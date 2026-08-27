@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AuthService from '../services/AuthService';
 
 export default function Header() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
+
+  const currentUser = AuthService.getCurrentUser();
+  const initial = (currentUser?.email?.[0] || '?').toUpperCase();
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
@@ -23,7 +27,13 @@ export default function Header() {
 
   const goToProfile = () => {
     setIsProfileMenuOpen(false);
-    navigate('/profile'); // Asegúrate que esta ruta exista en tu enrutador
+    navigate('/profile');
+  };
+
+  const handleLogout = () => {
+    AuthService.logout();
+    setIsProfileMenuOpen(false);
+    navigate('/login');
   };
 
   return (
@@ -37,16 +47,15 @@ export default function Header() {
           <span className="material-symbols-outlined text-2xl">chat_bubble</span>
         </button>
 
-        {/* Contenedor de la foto con menú */}
+        {/* Contenedor del avatar con menú */}
         <div className="relative" ref={menuRef}>
           <div
-            className="h-10 w-10 cursor-pointer rounded-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage:
-                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDNI4hMAUIyv4ffDBZGdjOGyb81zdNnseaqZB5GVQpk0KPDJi7CnsjZ-2IfG70EXL7XLdbhG2LekwQm1mToQNg6JAwRPs4DuVGvPgdyShBStgENRHHBXZo7Q1MaKBOe4TYmZzZMJC4P0TvK-0RtylqA-QHX_egtfcGwlDQkF2oPtQZa2s67E0HquLC1hazAqrUV7Kd9w8SRWSMLXlV4W7UUdQf9j_ph9RmRw6A4uG5sbvoGWHRrTsnaHuj9SFEmk2yOCbaEuFeUUTIQ')",
-            }}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-primary font-bold text-white"
             onClick={toggleProfileMenu}
-          />
+            title={currentUser?.email || 'Cuenta'}
+          >
+            {initial}
+          </div>
 
           {/* Menú desplegable */}
           {isProfileMenuOpen && (
@@ -56,6 +65,12 @@ export default function Header() {
                 className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 Ver perfil
+              </button>
+              <button
+                onClick={handleLogout}
+                className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
+              >
+                Cerrar sesión
               </button>
             </div>
           )}

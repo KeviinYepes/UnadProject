@@ -1,6 +1,9 @@
 package com.unad.project_video_platform.service.impl;
 
+import com.unad.project_video_platform.dto.ChangePasswordRequest;
+import com.unad.project_video_platform.dto.ProfileUpdateRequest;
 import com.unad.project_video_platform.entity.User;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -56,4 +59,12 @@ public interface IUserService {
      * Verifica si existe un usuario por número de documento
      */
     boolean existsByDocumentNumber(String documentNumber);
+
+    User getCurrentUser();
+
+    User updateProfile(ProfileUpdateRequest request);
+
+    void changePassword(ChangePasswordRequest request);
+
+    User updatePhoto(MultipartFile file);
 }

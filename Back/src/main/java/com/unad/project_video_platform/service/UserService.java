@@ -1,12 +1,18 @@
 package com.unad.project_video_platform.service;
 
+import com.unad.project_video_platform.dto.ChangePasswordRequest;
+import com.unad.project_video_platform.dto.ProfileUpdateRequest;
 import com.unad.project_video_platform.entity.User;
+import com.unad.project_video_platform.repository.RoleRepository;
 import com.unad.project_video_platform.repository.UserRepository;
 import com.unad.project_video_platform.service.impl.IUserService;
-import com.unad.project_video_platform.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +25,12 @@ public class UserService implements IUserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     /**
      * Obtiene todos los usuarios
@@ -79,6 +91,13 @@ public class UserService implements IUserService {
                     .orElseThrow(() -> new RuntimeException("Rol no encontrado con id: " + user.getRole().getId()));
         }
 
+        // Asignar contraseña (por defecto si no se proporciona)
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode("User123!"));
+        } else {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+
         return userRepository.save(user);
     }
 
@@ -115,6 +134,11 @@ public class UserService implements IUserService {
         user.setDocumentNumber(userDetails.getDocumentNumber());
         user.setEmail(userDetails.getEmail());
 
+        // Actualizar contraseña solo si se proporciona una nueva
+        if (userDetails.getPassword() != null && !userDetails.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
+        }
+
         return userRepository.save(user);
     }
 
@@ -141,5 +165,72 @@ public class UserService implements IUserService {
      */
     public boolean existsByDocumentNumber(String documentNumber) {
         return userRepository.existsByDocumentNumber(documentNumber);
+    }
+
+    /**
+     * Obtiene la entidad del usuario autenticado actual desde el contexto de seguridad.
+     */
+    private User getCurrentUserEntity() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new RuntimeException("No hay sesión autenticada");
+        }
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+    }
+
+    /**
+     * Obtiene el perfil del usuario autenticado.
+     */
+    public User getCurrentUser() {
+        return getCurrentUserEntity();
+    }
+
+    /**
+     * Actualiza los datos del perfil del usuario autenticado.
+     */
+    @Transactional
+    public User updateProfile(ProfileUpdateRequest request) {
+        User user = getCurrentUserEntity();
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            user.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null && !request.getLastName().isBlank()) {
+            user.setLastName(request.getLastName());
+        }
+        user.setBio(request.getBio());
+        user.setPhone(request.getPhone());
+        user.setCargo(request.getCargo());
+        return userRepository.save(user);
+    }
+
+    /**
+     * Cambia la contraseña del usuario autenticado.
+     */
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User user = getCurrentUserEntity();
+        if (request.getCurrentPassword() == null
+                || user.getPassword() == null
+                || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        }
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 6 caracteres");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    /**
+     * Actualiza la foto de perfil del usuario autenticado.
+     */
+    @Transactional
+    public User updatePhoto(MultipartFile file) {
+        User user = getCurrentUserEntity();
+        String path = fileStorageService.storeImage(file);
+        user.setPhotoUrl(path);
+        return userRepository.save(user);
     }
 }

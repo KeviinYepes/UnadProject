@@ -1,14 +1,17 @@
 package com.unad.project_video_platform.controller;
 
+import com.unad.project_video_platform.dto.ApiResponse;
+import com.unad.project_video_platform.dto.ChangePasswordRequest;
+import com.unad.project_video_platform.dto.ProfileUpdateRequest;
 import com.unad.project_video_platform.entity.User;
 import com.unad.project_video_platform.service.impl.IUserService;
-import com.unad.project_video_platform.dto.ApiResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,71 @@ public class UserController {
     public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
         List<User> users = userService.getAllUsers();
         return ResponseEntity.ok(ApiResponse.ok("Users consulted", users));
+    }
+
+    /**
+     * GET /api/users/me - Obtiene el perfil del usuario autenticado
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<User>> getCurrentUser() {
+        try {
+            User user = userService.getCurrentUser();
+            return ResponseEntity.ok(ApiResponse.ok("Current user", user));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<User>unauthorized(e.getMessage()));
+        }
+    }
+
+    /**
+     * PUT /api/users/me - Actualiza los datos del perfil del usuario autenticado
+     */
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<User>> updateCurrentUser(@RequestBody ProfileUpdateRequest request) {
+        try {
+            User updated = userService.updateProfile(request);
+            return ResponseEntity.ok(ApiResponse.ok("Profile updated", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<User>badRequest(e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.<User>notFound(e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/users/me/photo - Actualiza la foto de perfil
+     */
+    @PostMapping("/me/photo")
+    public ResponseEntity<ApiResponse<User>> uploadPhoto(@RequestParam("file") MultipartFile file) {
+        try {
+            User updated = userService.updatePhoto(file);
+            return ResponseEntity.ok(ApiResponse.ok("Photo updated", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<User>badRequest(e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<User>internalError(e.getMessage()));
+        }
+    }
+
+    /**
+     * PUT /api/users/me/password - Cambia la contraseña
+     */
+    @PutMapping("/me/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@RequestBody ChangePasswordRequest request) {
+        try {
+            userService.changePassword(request);
+            return ResponseEntity.ok(ApiResponse.<Void>ok("Password updated", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<Void>badRequest(e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Void>internalError(e.getMessage()));
+        }
     }
 
     /**

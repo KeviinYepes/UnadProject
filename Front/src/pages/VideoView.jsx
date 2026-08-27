@@ -1,5 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
+import { API_BASE_URL } from '../config/api';
+
+function getYoutubeEmbed(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+}
 
 export default function VideoView() {
   const location = useLocation();
@@ -8,6 +15,10 @@ export default function VideoView() {
   // Datos por defecto si no vienen del state
   const defaultTitle = "Declaración de Renta 2024: Guía Completa";
   const defaultCategory = "Impuestos";
+
+  const embedUrl = getYoutubeEmbed(tutorial.url);
+  const type = (tutorial.type || 'VIDEO').toUpperCase();
+  const contentUrl = tutorial.url?.startsWith('/') ? `${API_BASE_URL}${tutorial.url}` : tutorial.url;
 
   return (
     <div className="font-display bg-background-light text-[#0d141b] dark:bg-background-dark dark:text-slate-200 transition-colors duration-300">
@@ -24,7 +35,7 @@ export default function VideoView() {
                 {/* Migas de pan (Breadcrumbs) */}
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    to="/tutorials"
+                    to="/admin/videos"
                     className="text-sm font-medium text-slate-500 hover:text-primary dark:text-slate-400"
                   >
                     Tutoriales
@@ -58,42 +69,52 @@ export default function VideoView() {
                   </button>
                 </div>
 
-                {/* Reproductor de Video Personalizado */}
-                <div className="group relative overflow-hidden rounded-2xl bg-black shadow-2xl">
-                  <div
-                    className="relative aspect-video flex items-center justify-center bg-cover bg-center transition-transform duration-500 group-hover:scale-105 opacity-80"
-                    style={{
-                      backgroundImage: `url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1200')`,
-                    }}
-                  >
-                    {/* Botón Play Central */}
-                    <button className="flex size-20 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-primary/40 backdrop-blur-sm transition-all hover:scale-110 active:scale-95">
-                      <span className="material-symbols-outlined !text-5xl fill">play_arrow</span>
-                    </button>
+                {type === 'IMAGE' ? (
+                  <div className="overflow-hidden rounded-2xl bg-black shadow-2xl">
+                    <img
+                      src={contentUrl}
+                      alt={tutorial.title || 'Imagen'}
+                      className="max-h-[70vh] w-full object-contain"
+                    />
                   </div>
-
-                  {/* Controles del Video (Simulados) */}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-6 py-4">
-                    <div className="flex flex-col gap-2">
-                      <div className="group/progress relative h-1.5 w-full cursor-pointer rounded-full bg-white/30">
-                        <div className="absolute h-full w-1/3 rounded-full bg-primary">
-                          <div className="absolute right-0 top-1/2 size-3 -translate-y-1/2 rounded-full bg-white opacity-0 transition-opacity group-hover/progress:opacity-100 shadow-lg"></div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-white">
-                          <span className="material-symbols-outlined cursor-pointer hover:text-primary">play_arrow</span>
-                          <span className="material-symbols-outlined cursor-pointer hover:text-primary">volume_up</span>
-                          <p className="text-xs font-medium">04:15 / 15:20</p>
-                        </div>
-                        <div className="flex items-center gap-4 text-white">
-                          <span className="material-symbols-outlined cursor-pointer hover:text-primary">settings</span>
-                          <span className="material-symbols-outlined cursor-pointer hover:text-primary">fullscreen</span>
-                        </div>
-                      </div>
+                ) : type === 'PDF' ? (
+                  <div className="aspect-video overflow-hidden rounded-2xl bg-white shadow-2xl">
+                    <iframe className="h-full w-full" src={contentUrl} title={tutorial.title || 'PDF'} />
+                  </div>
+                ) : embedUrl ? (
+                  <div className="aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl">
+                    <iframe
+                      className="h-full w-full"
+                      src={embedUrl}
+                      title={tutorial.title || 'Video'}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div className="group relative overflow-hidden rounded-2xl bg-black shadow-2xl">
+                    <div
+                      className="relative aspect-video flex items-center justify-center bg-cover bg-center transition-transform duration-500 group-hover:scale-105 opacity-80"
+                      style={{
+                        backgroundImage: `url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1200')`,
+                      }}
+                    >
+                      <button className="flex size-20 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-primary/40 backdrop-blur-sm transition-all hover:scale-110 active:scale-95">
+                        <span className="material-symbols-outlined !text-5xl fill">play_arrow</span>
+                      </button>
                     </div>
+                    {contentUrl && (
+                      <a
+                        href={contentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-6 py-4 text-center text-sm font-bold text-white hover:text-primary"
+                      >
+                        Abrir contenido
+                      </a>
+                    )}
                   </div>
-                </div>
+                )}
 
                 {/* Sección de Información del Tutorial */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900/50">
@@ -130,7 +151,7 @@ export default function VideoView() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900/50">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-[#0d141b] dark:text-white">Dudas y Discusión</h2>
-                    <Link to="/forum" className="text-sm font-bold text-primary hover:underline">Ver foro completo</Link>
+                    <Link to="/foro" className="text-sm font-bold text-primary hover:underline">Ver foro completo</Link>
                   </div>
                   
                   <div className="flex flex-col gap-6">
@@ -164,7 +185,7 @@ export default function VideoView() {
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 italic">
                           "En el minuto 4:15 no me aparece el botón de adjuntar..."
                         </p>
-                        <Link to="/forum" className="mt-2 inline-block text-xs font-bold text-primary">
+                        <Link to="/foro" className="mt-2 inline-block text-xs font-bold text-primary">
                           Ver respuesta experta (1)
                         </Link>
                       </div>

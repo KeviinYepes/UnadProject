@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -48,7 +50,7 @@ public class VideoController {
     }
 
     /**
-     * POST /api/videos - Crea un nuevo video
+     * POST /api/videos - Crea un nuevo contenido (video por URL)
      */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -57,6 +59,30 @@ public class VideoController {
             Video created = videoService.createVideo(video);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.created("Video created", created));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<Video>badRequest(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Video>internalError(e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/videos/upload - Crea un contenido subiendo un archivo (imagen o PDF)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/upload")
+    public ResponseEntity<ApiResponse<Video>> uploadContent(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "type", required = false) String type) {
+        try {
+            Video created = videoService.createFromUpload(file, title, description, category, type);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.created("Contenido creado", created));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.<Video>badRequest(e.getMessage()));
