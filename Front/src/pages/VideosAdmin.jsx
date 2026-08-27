@@ -22,6 +22,7 @@ const VideosAdmin = () => {
   const [newTag, setNewTag] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedThumbnail, setSelectedThumbnail] = useState(null);
+  const [wantsPreview, setWantsPreview] = useState(false);
 
   /* ================== CARGAR VIDEOS ================== */
   useEffect(() => {
@@ -68,8 +69,12 @@ const VideosAdmin = () => {
 
     try {
       if (editingVideo) {
-        // Actualizar contenido existente
-        const videoData = { ...form, tags };
+        // Actualizar contenido existente (conserva o quita el preview)
+        const videoData = {
+          ...form,
+          tags,
+          thumbnailUrl: wantsPreview ? (editingVideo.thumbnailUrl || "") : "",
+        };
         await VideoService.update(editingVideo.id, videoData);
         alert("Contenido actualizado correctamente");
       } else if (selectedFile && form.type !== "VIDEO") {
@@ -79,7 +84,7 @@ const VideosAdmin = () => {
           description: form.description,
           category: form.category || "General",
           type: form.type,
-          thumbnail: selectedThumbnail || null,
+          thumbnail: wantsPreview ? (selectedThumbnail || null) : null,
         });
         alert("Contenido publicado correctamente");
       } else {
@@ -114,6 +119,7 @@ const VideosAdmin = () => {
     setTags(video.tags || ["Capacitación"]);
     setSelectedFile(null);
     setSelectedThumbnail(null);
+    setWantsPreview(!!video.thumbnailUrl);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -148,6 +154,7 @@ const VideosAdmin = () => {
     setNewTag("");
     setSelectedFile(null);
     setSelectedThumbnail(null);
+    setWantsPreview(false);
   };
 
   const handleDiscard = () => {
@@ -321,18 +328,38 @@ const VideosAdmin = () => {
                     )}
                   </div>
 
-                  <div>
-                    <label className="text-sm font-semibold">Imagen de preview (opcional)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setSelectedThumbnail(e.target.files?.[0] || null)}
-                      disabled={loading}
-                      className="input"
-                    />
-                    {selectedThumbnail && (
-                      <p className="mt-2 text-sm font-semibold text-primary">
-                        Preview seleccionado: {selectedThumbnail.name}
+                  <div className="rounded-lg border border-border-light p-4 dark:border-border-dark">
+                    <label className="flex cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={wantsPreview}
+                        onChange={(e) => setWantsPreview(e.target.checked)}
+                        disabled={loading}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      <span className="text-sm font-semibold">Agregar imagen de preview personalizada</span>
+                    </label>
+
+                    {wantsPreview && !editingVideo && (
+                      <div className="mt-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setSelectedThumbnail(e.target.files?.[0] || null)}
+                          disabled={loading}
+                          className="input"
+                        />
+                        {selectedThumbnail && (
+                          <p className="mt-2 text-sm font-semibold text-primary">
+                            Preview seleccionado: {selectedThumbnail.name}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {wantsPreview && editingVideo?.thumbnailUrl && (
+                      <p className="mt-3 text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                        Este contenido ya tiene una imagen de preview. Desmarca la casilla para quitarla al guardar.
                       </p>
                     )}
                   </div>
