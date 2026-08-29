@@ -9,6 +9,7 @@ export default function VideosLibrary() {
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -24,23 +25,42 @@ export default function VideosLibrary() {
     load();
   }, []);
 
+  // Categorías únicas derivadas de los contenidos reales
+  const categories = useMemo(() => {
+    const set = new Set();
+    contents.forEach((c) => {
+      set.add(c.category?.trim() || 'Sin categoría');
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [contents]);
+
   const filtered = useMemo(() => {
     const q = searchQuery
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
-    if (!q) return contents;
     const normalize = (v) =>
       String(v ?? '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
+
     return contents.filter((c) => {
+      const category = c.category?.trim() || 'Sin categoría';
+      const matchesCategory = !selectedCategory || category === selectedCategory;
       const haystack = `${normalize(c.title)} ${normalize(c.category)} ${normalize(c.description)}`;
-      return haystack.includes(q);
+      const matchesSearch = !q || haystack.includes(q);
+      return matchesCategory && matchesSearch;
     });
-  }, [searchQuery, contents]);
+  }, [searchQuery, selectedCategory, contents]);
+
+  const chipClass = (active) =>
+    `flex h-9 shrink-0 items-center justify-center rounded-lg border px-4 text-sm font-medium transition-colors ${
+      active
+        ? 'border-primary bg-primary text-white'
+        : 'border-slate-300 bg-white hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-800'
+    }`;
 
   return (
     <div className="flex h-screen w-full font-display bg-background-light text-text-light-primary dark:bg-background-dark dark:text-text-dark-primary">
@@ -82,6 +102,27 @@ export default function VideosLibrary() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </label>
+
+            {/* Filtros / Chips por categoría */}
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={chipClass(selectedCategory === null)}
+                >
+                  Todos
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                    className={chipClass(selectedCategory === cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {loading ? (
               <p className="text-text-secondary-light dark:text-text-secondary-dark">Cargando contenidos...</p>
