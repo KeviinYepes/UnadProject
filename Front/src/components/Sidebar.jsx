@@ -22,14 +22,9 @@ export default function Sidebar() {
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-white">
             <span className="material-symbols-outlined text-2xl">all_inclusive</span>
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-base font-bold leading-normal text-text-light-primary dark:text-text-dark-primary">
-              CorpPortal
-            </h1>
-            <p className="text-sm font-normal leading-normal text-text-light-secondary dark:text-text-dark-secondary">
-              internal.portal.com
-            </p>
-          </div>
+          <h1 className="text-base font-bold leading-normal text-text-light-primary dark:text-text-dark-primary">
+            Guia Corp Forms
+          </h1>
         </div>
 
         {/* Navegación principal */}

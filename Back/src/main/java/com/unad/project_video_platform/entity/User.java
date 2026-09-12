@@ -1,6 +1,5 @@
 package com.unad.project_video_platform.entity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,10 +35,6 @@ public class User {
 
     @Column(name = "email", nullable = false, length = 255)
     private String email;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "password", length = 255)
-    private String password;
 
     @Column(name = "phone", length = 50)
     private String phone;

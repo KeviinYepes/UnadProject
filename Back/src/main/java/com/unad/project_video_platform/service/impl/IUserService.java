@@ -1,6 +1,5 @@
 package com.unad.project_video_platform.service.impl;
 
-import com.unad.project_video_platform.dto.ChangePasswordRequest;
 import com.unad.project_video_platform.dto.ProfileUpdateRequest;
 import com.unad.project_video_platform.entity.User;
 import org.springframework.web.multipart.MultipartFile;
@@ -68,8 +67,6 @@ public interface IUserService {
     User getCurrentUser();
 
     User updateProfile(ProfileUpdateRequest request);
-
-    void changePassword(ChangePasswordRequest request);
 
     User updatePhoto(MultipartFile file);
 }

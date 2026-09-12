@@ -6,7 +6,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    documentNumber: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -169,7 +169,7 @@ export default function Login() {
 
                   <label className="flex w-full flex-col">
                     <p className="pb-2 text-sm font-medium leading-normal text-[#101922] dark:text-slate-300">
-                      Contraseña
+                      Numero de Documento
                     </p>
                     <div className="flex w-full flex-1 items-stretch rounded-lg">
                       <div className="flex items-center justify-center rounded-l-lg border border-r-0 border-slate-300 bg-background-light pl-4 text-slate-500 dark:border-slate-700 dark:bg-background-dark">
@@ -178,9 +178,9 @@ export default function Login() {
                       <input
                         type={showPassword ? "text" : "password"}
                         className="form-input h-12 w-full min-w-0 flex-1 border border-r-0 border-slate-300 bg-background-light p-3 text-base font-normal text-[#101922] focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/50 dark:border-slate-700 dark:bg-background-dark dark:text-white"
-                        placeholder="Tu contraseña"
-                        name="password"
-                        value={formData.password}
+                        placeholder="Tu numero de documento"
+                        name="documentNumber"
+                        value={formData.documentNumber}
                         onChange={handleChange}
                         required
                         disabled={loading}
