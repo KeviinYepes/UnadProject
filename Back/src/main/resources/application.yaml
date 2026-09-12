@@ -43,6 +43,7 @@ server:
   port: 8080
 
 app:
+  upload-dir: ${APP_UPLOAD_DIR:uploads}
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
   storage:
     materials-path: ${APP_MATERIALS_PATH:uploads/materials}

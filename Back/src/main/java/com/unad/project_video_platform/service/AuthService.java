@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,17 +27,23 @@ public class AuthService implements IAuthService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Value("${spring.mail.username:}")
     private String mailUsername;
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials: Email or password incorrect"));
+        if (request.getEmail() == null || request.getPassword() == null) {
+            throw new IllegalArgumentException("Credenciales inválidas: email y contraseña son obligatorios");
+        }
 
-        if (request.getDocumentNumber() == null
-            || !request.getDocumentNumber().equals(user.getDocumentNumber())) {
-            throw new IllegalArgumentException("Invalid credentials: Email or password incorrect");
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas: email o contraseña incorrectos"));
+
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Credenciales inválidas: email o contraseña incorrectos");
         }
 
         String roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";
@@ -68,11 +75,11 @@ public class AuthService implements IAuthService {
 
                     Recibimos una solicitud para recuperar tu contrasena.
 
-                    Tu clave de acceso actual es:
-                    %s
+                    Tu cuenta ya usa contraseña privada. Por seguridad no podemos enviarla por correo.
+                    Si no la recuerdas, solicita a un administrador que actualice tu contraseña desde el panel de usuarios.
 
                     Si no solicitaste este mensaje, puedes ignorarlo.
-                    """.formatted(user.getFirstName(), user.getDocumentNumber()));
+                    """.formatted(user.getFirstName()));
 
             mailSender.send(message);
         } catch (MailException e) {

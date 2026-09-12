@@ -59,8 +59,9 @@ public class ContentController {
     @GetMapping("/materials/{storedFileName:.+}")
     public ResponseEntity<Resource> getMaterial(@PathVariable String storedFileName) {
         Resource resource = localContentMaterialStorageService.loadAsResource(storedFileName);
+        String contentType = localContentMaterialStorageService.resolveContentType(storedFileName);
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);

@@ -9,6 +9,12 @@ import Pagination from "../components/Pagination";
 import AuthService from "../services/AuthService";
 import CategoryService from "../services/CategoryService";
 import VideoService from "../services/VideoService";
+import {
+  ACCEPTED_MATERIAL_TYPES,
+  getFirstImageMaterialUrl,
+  getMaterialFormat,
+  getMaterialFormatsSummary,
+} from "../utils/materialFormats";
 
 const PAGE_SIZE = 12;
 
@@ -130,7 +136,7 @@ export default function VideosLibrary() {
 
     try {
       if (!form.urlVideo.trim() && form.materials.length === 0) {
-        throw new Error("Agrega una URL de video o al menos un PDF como material de apoyo.");
+        throw new Error("Agrega una URL de video o al menos un material de apoyo.");
       }
 
       const currentUser = AuthService.getCurrentUser();
@@ -160,9 +166,6 @@ export default function VideosLibrary() {
       setLoading(false);
     }
   };
-
-  const fallbackImage =
-    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=500&auto=format&fit=crop";
 
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
@@ -195,20 +198,24 @@ export default function VideosLibrary() {
 
   const getYouTubeThumbnail = (url) => {
     const videoId = getYouTubeVideoId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : fallbackImage;
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : "";
   };
 
   const toCardItem = (video) => {
     const hasVideoUrl = Boolean(String(video.urlVideo || "").trim());
     const isMaterialOnly = !hasVideoUrl && (video.materials || []).length > 0;
+    const materialSummary = getMaterialFormatsSummary(video.materials || []);
+    const imageMaterialUrl = getFirstImageMaterialUrl(video.materials || []);
 
     return {
       id: video.id,
       title: video.title,
       category: video.category?.categoryName || "Sin categoria",
       createdBy: video.createdBy,
-      duration: isMaterialOnly ? "PDF" : durations[video.id] || "...",
-      imageUrl: getYouTubeThumbnail(video.urlVideo),
+      duration: isMaterialOnly
+        ? materialSummary || "Material"
+        : [durations[video.id] || "...", materialSummary].filter(Boolean).join(" | "),
+      imageUrl: imageMaterialUrl || getYouTubeThumbnail(video.urlVideo),
       url: video.urlVideo,
       isMaterialOnly,
       description: video.description,
@@ -385,10 +392,11 @@ export default function VideosLibrary() {
                         duration={tutorial.duration}
                         imageUrl={tutorial.imageUrl}
                         isMaterialOnly={tutorial.isMaterialOnly}
+                        materials={tutorial.materials}
                       />
                       <div className="mt-2 flex items-center gap-1 text-sm font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
                         <span className="material-symbols-outlined text-base">
-                          {tutorial.isMaterialOnly ? "picture_as_pdf" : "play_circle"}
+                          {tutorial.isMaterialOnly ? getMaterialFormat(tutorial.materials[0]).icon : "play_circle"}
                         </span>
                         {tutorial.isMaterialOnly ? "Ver material de apoyo" : "Ver paso a paso"}
                       </div>
@@ -421,7 +429,7 @@ export default function VideosLibrary() {
                         Agregar contenido multimedia
                       </h2>
                       <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-                        Completa la informacion del contenido. Puedes registrar solo PDFs si no hay video.
+                        Completa la informacion del contenido. Puedes registrar archivos de apoyo aunque no haya video.
                       </p>
                     </div>
 
@@ -436,7 +444,7 @@ export default function VideosLibrary() {
                     </button>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
+                  <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6" noValidate>
                     <Input
                       label="Titulo"
                       name="title"
@@ -482,7 +490,7 @@ export default function VideosLibrary() {
 
                     <div className="md:col-span-2">
                       <FileInput
-                        label="Materiales PDF"
+                        label="Materiales de apoyo"
                         name="materials"
                         files={form.materials}
                         onChange={handleFileChange}
@@ -543,7 +551,7 @@ const Select = ({ label, options, disabled = false, ...props }) => (
 const Textarea = ({ label, required = true, disabled = false, rows = 4, ...props }) => (
   <div className="flex flex-col gap-2">
     <label className="text-sm font-semibold">{label}</label>
-    <textarea {...props} rows={rows} className="input" required={required} disabled={disabled} />
+    <textarea {...props} rows={rows} className="input resize-none" required={required} disabled={disabled} />
   </div>
 );
 
@@ -553,23 +561,30 @@ const FileInput = ({ label, files = [], disabled = false, ...props }) => (
     <input
       {...props}
       type="file"
-      accept="application/pdf,.pdf"
+      accept={ACCEPTED_MATERIAL_TYPES}
       multiple
       className="input file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
       disabled={disabled}
     />
+    <p className="text-xs text-text-light-secondary dark:text-dark-secondary">
+      Formatos permitidos: PDF, Word, Excel, JPG, PNG y WEBP.
+    </p>
     {files.length > 0 && (
       <div className="flex flex-wrap gap-2">
-        {files.map((file) => (
-          <span
-            key={`${file.name}-${file.size}`}
-            title={file.name}
-            className="inline-flex max-w-full items-center gap-1 rounded-lg bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-900/20 sm:max-w-xs"
-          >
-            <span className="material-symbols-outlined shrink-0 text-sm">picture_as_pdf</span>
-            <span className="min-w-0 truncate">{file.name}</span>
-          </span>
-        ))}
+        {files.map((file) => {
+          const format = getMaterialFormat(file);
+          return (
+            <span
+              key={`${file.name}-${file.size}`}
+              title={file.name}
+              className={`inline-flex max-w-full items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold sm:max-w-xs ${format.tone}`}
+            >
+              <span className="material-symbols-outlined shrink-0 text-sm">{format.icon}</span>
+              <span className="shrink-0 font-black">{format.label}</span>
+              <span className="min-w-0 truncate">{file.name}</span>
+            </span>
+          );
+        })}
       </div>
     )}
   </div>

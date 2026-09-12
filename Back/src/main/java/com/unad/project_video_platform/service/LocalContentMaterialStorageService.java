@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.MalformedURLException;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,11 +25,11 @@ public class LocalContentMaterialStorageService {
         this.uploadDirectory = Paths.get(materialsPath).toAbsolutePath().normalize();
     }
 
-    public LocalUploadResult savePdf(MultipartFile file) {
+    public LocalUploadResult saveMaterial(MultipartFile file, String extension, String mimeType) {
         try {
             Files.createDirectories(uploadDirectory);
 
-            String storedFileName = UUID.randomUUID() + ".pdf";
+            String storedFileName = UUID.randomUUID() + "." + normalizeExtension(extension);
             Path target = uploadDirectory.resolve(storedFileName).normalize();
 
             if (!target.startsWith(uploadDirectory)) {
@@ -38,10 +39,24 @@ public class LocalContentMaterialStorageService {
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
             String url = "/api/content/materials/" + storedFileName;
-            return new LocalUploadResult(storedFileName, url);
+            return new LocalUploadResult(storedFileName, url, mimeType);
         } catch (Exception e) {
-            throw new RuntimeException("No se pudo guardar el PDF localmente: " + e.getMessage(), e);
+            throw new RuntimeException("No se pudo guardar el material localmente: " + e.getMessage(), e);
         }
+    }
+
+    public String resolveContentType(String storedFileName) {
+        Path file = resolveStoredFile(storedFileName);
+        try {
+            String detected = Files.probeContentType(file);
+            if (detected != null && !detected.isBlank()) {
+                return detected;
+            }
+        } catch (Exception ignored) {
+        }
+
+        String guessed = URLConnection.guessContentTypeFromName(storedFileName);
+        return guessed == null || guessed.isBlank() ? "application/octet-stream" : guessed;
     }
 
     public Resource loadAsResource(String storedFileName) {
@@ -76,5 +91,16 @@ public class LocalContentMaterialStorageService {
             throw new IllegalArgumentException("Nombre de archivo invalido");
         }
         return file;
+    }
+
+    private String normalizeExtension(String extension) {
+        String value = extension == null ? "" : extension.trim().toLowerCase();
+        if (value.startsWith(".")) {
+            value = value.substring(1);
+        }
+        if (value.isBlank() || value.contains("/") || value.contains("\\") || value.contains("..")) {
+            throw new IllegalArgumentException("Extension de archivo invalida");
+        }
+        return value;
     }
 }

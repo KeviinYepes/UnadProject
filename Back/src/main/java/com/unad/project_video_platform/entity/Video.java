@@ -36,6 +36,18 @@ public class Video {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    /**
+     * Tipo de contenido: VIDEO, PDF, IMAGE, EXCEL o WORD.
+     */
+    @Column(name = "type", length = 50)
+    private String type = "VIDEO";
+
+    /**
+     * URL opcional de una miniatura personalizada.
+     */
+    @Column(name = "thumbnail_url", length = 500)
+    private String thumbnailUrl;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -52,6 +64,8 @@ public class Video {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 }

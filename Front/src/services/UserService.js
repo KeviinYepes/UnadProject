@@ -24,23 +24,6 @@ const UserService = {
     return response.data.data || response.data;
   },
 
-  getMe: async () => {
-    const response = await api.get("/api/users/profile/current");
-    return response.data.data || response.data;
-  },
-
-  updateMe: async (userData) => {
-    const payload = {
-      firstName: userData?.firstName,
-      lastName: userData?.lastName,
-      documentType: userData?.documentType,
-      documentNumber: userData?.documentNumber,
-    };
-
-    const response = await api.put("/api/users/profile/current", payload);
-    return response.data.data || response.data;
-  },
-
   /**
    * Busca un usuario por email
    * @param {string} email
@@ -111,6 +94,9 @@ const UserService = {
       role: userData?.roleId ? { id: Number(userData.roleId) } : null,
       status,
     };
+    if (userData?.password) {
+      payload.password = userData.password;
+    }
 
     const response = await api.post("/api/users", payload);
     return response.data.data || response.data;
@@ -133,6 +119,9 @@ const UserService = {
       role: userData?.roleId ? { id: Number(userData.roleId) } : null,
       status,
     };
+    if (userData?.password) {
+      payload.password = userData.password;
+    }
 
     const response = await api.put(`/api/users/${id}`, payload);
     return response.data.data || response.data;
@@ -145,6 +134,40 @@ const UserService = {
    */
   delete: async (id) => {
     const response = await api.delete(`/api/users/${id}`);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Obtiene el perfil del usuario autenticado
+   */
+  getMe: async () => {
+    const response = await api.get("/api/users/me");
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Actualiza los datos del perfil del usuario autenticado
+   */
+  updateMe: async (data) => {
+    const response = await api.put("/api/users/me", data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Sube una nueva foto de perfil
+   */
+  uploadPhoto: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/api/users/me/photo", formData);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Cambia la contraseña del usuario autenticado
+   */
+  changePassword: async (data) => {
+    const response = await api.put("/api/users/me/password", data);
     return response.data.data || response.data;
   },
 };

@@ -6,7 +6,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
-    documentNumber: ''
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -71,7 +71,7 @@ export default function Login() {
         ...current,
         email: recoverForm.email
       }));
-      setSuccess('Te enviamos la clave actual al correo registrado.');
+      setSuccess('Te enviamos las instrucciones al correo registrado.');
       setIsRecoverOpen(false);
     } catch (err) {
       setRecoverError(err.message || 'No se pudo enviar el correo de recuperacion.');
@@ -169,7 +169,7 @@ export default function Login() {
 
                   <label className="flex w-full flex-col">
                     <p className="pb-2 text-sm font-medium leading-normal text-[#101922] dark:text-slate-300">
-                      Numero de Documento
+                      Contraseña
                     </p>
                     <div className="flex w-full flex-1 items-stretch rounded-lg">
                       <div className="flex items-center justify-center rounded-l-lg border border-r-0 border-slate-300 bg-background-light pl-4 text-slate-500 dark:border-slate-700 dark:bg-background-dark">
@@ -178,9 +178,9 @@ export default function Login() {
                       <input
                         type={showPassword ? "text" : "password"}
                         className="form-input h-12 w-full min-w-0 flex-1 border border-r-0 border-slate-300 bg-background-light p-3 text-base font-normal text-[#101922] focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/50 dark:border-slate-700 dark:bg-background-dark dark:text-white"
-                        placeholder="Tu numero de documento"
-                        name="documentNumber"
-                        value={formData.documentNumber}
+                        placeholder="Tu contraseña"
+                        name="password"
+                        value={formData.password}
                         onChange={handleChange}
                         required
                         disabled={loading}
@@ -251,7 +251,7 @@ export default function Login() {
                 Recuperar contrasena
               </h2>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                Escribe tu correo registrado y enviaremos tu clave de acceso actual.
+                Escribe tu correo registrado y enviaremos instrucciones de recuperacion.
               </p>
             </div>
 
@@ -292,7 +292,7 @@ export default function Login() {
                 disabled={recoverLoading}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {recoverLoading ? 'Enviando...' : 'Enviar clave'}
+                {recoverLoading ? 'Enviando...' : 'Enviar instrucciones'}
               </button>
             </div>
           </form>

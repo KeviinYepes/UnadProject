@@ -2,12 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import ContentThumbnail from "../components/ContentThumbnail";
 import AuthService from "../services/AuthService";
 import VideoStatsService from "../services/VideoStatsService";
 import ForumService from "../services/ForumService";
 import VideoService from "../services/VideoService";
 import CategoryService from "../services/CategoryService";
-import { buildApiUrl } from "../config/api";
+import {
+  ACCEPTED_MATERIAL_TYPES,
+  getFirstImageMaterialUrl,
+  getMaterialFormat,
+  getMaterialUrl,
+} from "../utils/materialFormats";
 
 export default function VideoView() {
   const location = useLocation();
@@ -28,6 +34,7 @@ export default function VideoView() {
   const contentUrl = getContentUrl(content);
   const hasVideoUrl = Boolean(contentUrl.trim());
   const videoId = getYouTubeVideoId(contentUrl);
+  const imageMaterialUrl = getFirstImageMaterialUrl(materials);
   const playerRef = useRef(null);
   const playerContainerRef = useRef(null);
   const isPlayingRef = useRef(false);
@@ -374,7 +381,7 @@ export default function VideoView() {
 
     try {
       if (!editForm.urlVideo.trim() && materials.length === 0) {
-        throw new Error("Agrega una URL de video o conserva al menos un PDF como material de apoyo.");
+        throw new Error("Agrega una URL de video o conserva al menos un material de apoyo.");
       }
 
       setContentSaving(true);
@@ -462,20 +469,19 @@ export default function VideoView() {
                   )}
                 </div>
 
-                <div className="overflow-hidden rounded-2xl bg-black shadow-2xl">
+                <div className="overflow-hidden rounded-2xl bg-card-light shadow-2xl dark:bg-card-dark">
                   {videoId ? (
-                    <div className="aspect-video w-full">
+                    <div className="aspect-video w-full bg-black">
                       <div ref={playerContainerRef} className="h-full w-full" title={title} />
                     </div>
                   ) : !hasVideoUrl ? (
-                    <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-surface-light p-8 text-center dark:bg-surface-dark">
-                      <span className="material-symbols-outlined text-5xl text-primary">picture_as_pdf</span>
-                      <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
-                        Contenido con material de apoyo
-                      </h2>
-                      <p className="max-w-md text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                        Este contenido no tiene video asociado. Revisa los PDFs disponibles en Material de apoyo.
-                      </p>
+                    <div className="aspect-video w-full">
+                      <ContentThumbnail
+                        title={title}
+                        imageUrl={imageMaterialUrl}
+                        materials={materials}
+                        isMaterialOnly
+                      />
                     </div>
                   ) : (
                     <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-surface-light p-8 text-center dark:bg-surface-dark">
@@ -567,10 +573,10 @@ export default function VideoView() {
                         <form className="flex flex-col gap-3" onSubmit={handleMaterialSubmit}>
                           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3 text-sm font-bold text-primary transition hover:bg-primary/10">
                             <span className="material-symbols-outlined text-lg">upload_file</span>
-                            Seleccionar PDF
+                            Seleccionar archivo
                             <input
                               type="file"
-                              accept="application/pdf,.pdf"
+                              accept={ACCEPTED_MATERIAL_TYPES}
                               multiple
                               className="hidden"
                               disabled={materialSubmitting}
@@ -580,15 +586,20 @@ export default function VideoView() {
 
                           {materialFiles.length > 0 && (
                             <div className="flex flex-col gap-2">
-                              {materialFiles.map((file) => (
-                                <span
-                                  key={`${file.name}-${file.size}`}
-                                  className="truncate rounded-lg bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-900/20"
-                                  title={file.name}
-                                >
-                                  {file.name}
-                                </span>
-                              ))}
+                              {materialFiles.map((file) => {
+                                const format = getMaterialFormat(file);
+                                return (
+                                  <span
+                                    key={`${file.name}-${file.size}`}
+                                    className={`inline-flex max-w-full items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold ${format.tone}`}
+                                    title={file.name}
+                                  >
+                                    <span className="material-symbols-outlined text-sm">{format.icon}</span>
+                                    <span className="shrink-0 font-black">{format.label}</span>
+                                    <span className="min-w-0 truncate">{file.name}</span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           )}
 
@@ -608,13 +619,14 @@ export default function VideoView() {
 
                       {materials.length === 0 ? (
                         <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                          Este contenido no tiene materiales PDF asociados.
+                          Este contenido no tiene materiales de apoyo asociados.
                         </p>
                       ) : (
                         materials.map((material) => (
                           <SupportButton
                             key={material.id || material.driveFileId}
-                            title={material.fileName || "Material PDF"}
+                            material={material}
+                            title={material.fileName || "Material de apoyo"}
                             meta={formatFileSize(material.sizeBytes)}
                             href={getMaterialUrl(material)}
                             canDelete={canManageMaterials}
@@ -804,8 +816,8 @@ export default function VideoView() {
 
           <div className="relative w-full max-w-md rounded-xl border border-border-light bg-card-light p-6 shadow-xl dark:border-border-dark dark:bg-card-dark">
             <div className="flex items-start gap-4">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300">
-                <span className="material-symbols-outlined">picture_as_pdf</span>
+              <div className={`flex size-11 shrink-0 items-center justify-center rounded-lg ${getMaterialFormat(materialToDelete).tone}`}>
+                <span className="material-symbols-outlined">{getMaterialFormat(materialToDelete).icon}</span>
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
@@ -815,7 +827,7 @@ export default function VideoView() {
                   Este archivo se eliminara del contenido y tambien se borrara del almacenamiento local.
                 </p>
                 <p className="mt-3 break-words rounded-lg bg-surface-light px-3 py-2 text-sm font-semibold text-text-primary-light [overflow-wrap:anywhere] dark:bg-surface-dark dark:text-text-primary-dark">
-                  {materialToDelete.fileName || "Material PDF"}
+                  {materialToDelete.fileName || "Material de apoyo"}
                 </p>
               </div>
             </div>
@@ -909,16 +921,21 @@ const FormTextarea = ({ label, required = true, disabled = false, rows = 4, ...p
   </label>
 );
 
-const SupportButton = ({ title, meta, href, canDelete = false, isDeleting = false, onDelete }) => {
+const SupportButton = ({ material, title, meta, href, canDelete = false, isDeleting = false, onDelete }) => {
+  const format = getMaterialFormat(material);
+
   return (
     <div className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition-all hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800">
       <a className="flex min-w-0 flex-1 items-center gap-3" href={href} target="_blank" rel="noreferrer">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30">
-          <span className="material-symbols-outlined">picture_as_pdf</span>
+        <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${format.tone}`}>
+          <span className="material-symbols-outlined">{format.icon}</span>
         </div>
         <div className="min-w-0 flex-1">
           <p className="break-words text-sm font-bold leading-5 [overflow-wrap:anywhere]">{title}</p>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">{meta}</p>
+          <p className="flex flex-wrap items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <span className={`rounded px-1.5 py-0.5 ${format.tone}`}>{format.label}</span>
+            <span>{meta}</span>
+          </p>
         </div>
       </a>
 
@@ -1042,14 +1059,6 @@ const getCategoryLabel = (category) => {
 
 const getContentUrl = (content) => content?.url || content?.urlVideo || "";
 
-const getMaterialUrl = (material) => {
-  if (material?.driveFileId) {
-    return buildApiUrl(`/api/content/materials/${material.driveFileId}`);
-  }
-
-  return buildApiUrl(material?.driveUrl);
-};
-
 const normalizeRole = (role) =>
   String(role || "USER")
     .replace(/^ROLE_/i, "")
@@ -1072,7 +1081,7 @@ const formatDate = (value) => {
 
 const formatFileSize = (value) => {
   const bytes = Number(value);
-  if (!bytes || Number.isNaN(bytes)) return "PDF";
+  if (!bytes || Number.isNaN(bytes)) return "Archivo";
 
   const mb = bytes / 1024 / 1024;
   if (mb >= 1) return `${mb.toFixed(1)} MB`;

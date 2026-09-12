@@ -18,11 +18,28 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class VideoService implements IVideoService {
+
+    private static final Set<String> ALLOWED_MATERIAL_EXTENSIONS = Set.of(
+            "pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png", "webp");
+
+    private static final Map<String, String> MIME_BY_EXTENSION = Map.ofEntries(
+            Map.entry("pdf", "application/pdf"),
+            Map.entry("doc", "application/msword"),
+            Map.entry("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            Map.entry("xls", "application/vnd.ms-excel"),
+            Map.entry("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            Map.entry("jpg", "image/jpeg"),
+            Map.entry("jpeg", "image/jpeg"),
+            Map.entry("png", "image/png"),
+            Map.entry("webp", "image/webp"));
 
     @Autowired
     private VideoRepository videoRepository;
@@ -146,7 +163,7 @@ public class VideoService implements IVideoService {
         }
         boolean hasVideoUrl = video.getUrlVideo() != null && !video.getUrlVideo().isBlank();
         if (!hasVideoUrl && !hasMaterials) {
-            throw new IllegalArgumentException("Debes agregar una URL de video o al menos un PDF como material de apoyo");
+            throw new IllegalArgumentException("Debes agregar una URL de video o al menos un material de apoyo");
         }
         if (video.getTitle() == null || video.getTitle().isBlank()) {
             throw new IllegalArgumentException("El titulo es obligatorio");
@@ -207,15 +224,16 @@ public class VideoService implements IVideoService {
                 continue;
             }
 
-            validatePdf(file);
-            LocalUploadResult uploadedFile = localContentMaterialStorageService.savePdf(file);
+            String extension = resolveMaterialExtension(file);
+            String mimeType = normalizeContentType(file, extension);
+            LocalUploadResult uploadedFile = localContentMaterialStorageService.saveMaterial(file, extension, mimeType);
 
             ContentMaterial material = new ContentMaterial();
             material.setContent(video);
             material.setDriveFileId(uploadedFile.storedFileName());
             material.setDriveUrl(uploadedFile.url());
             material.setFileName(resolveFileName(file));
-            material.setMimeType(resolveMimeType(file));
+            material.setMimeType(uploadedFile.mimeType());
             material.setSizeBytes(file.getSize());
             material.setPosition(position++);
 
@@ -231,23 +249,55 @@ public class VideoService implements IVideoService {
         return video.getMaterials();
     }
 
-    private void validatePdf(MultipartFile file) {
-        String fileName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
-        String contentType = file.getContentType() == null ? "" : file.getContentType();
-
-        if (!"application/pdf".equalsIgnoreCase(contentType) && !fileName.endsWith(".pdf")) {
-            throw new IllegalArgumentException("Solo se permiten archivos PDF como material de apoyo");
-        }
-    }
-
     private String resolveFileName(MultipartFile file) {
         String originalName = file.getOriginalFilename();
-        return originalName == null || originalName.isBlank() ? "material.pdf" : originalName;
+        return originalName == null || originalName.isBlank() ? "material" : originalName;
     }
 
-    private String resolveMimeType(MultipartFile file) {
-        String contentType = file.getContentType();
-        return contentType == null || contentType.isBlank() ? "application/pdf" : contentType;
+    private String resolveMaterialExtension(MultipartFile file) {
+        String extension = extensionFromFileName(file.getOriginalFilename());
+        String contentType = normalizeContentType(file.getContentType());
+
+        if (!ALLOWED_MATERIAL_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Formato de material no permitido. Usa PDF, Word, Excel, JPG, PNG o WEBP");
+        }
+
+        if (!contentType.isBlank()
+                && !"application/octet-stream".equals(contentType)
+                && !isCompatibleExtension(extension, contentType)) {
+            throw new IllegalArgumentException("El tipo de archivo no coincide con su extension");
+        }
+
+        return extension;
+    }
+
+    private String extensionFromFileName(String fileName) {
+        if (fileName == null || fileName.isBlank() || !fileName.contains(".")) {
+            return "";
+        }
+        return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeContentType(MultipartFile file, String extension) {
+        String contentType = normalizeContentType(file.getContentType());
+        return contentType.isBlank() || "application/octet-stream".equals(contentType)
+                ? MIME_BY_EXTENSION.getOrDefault(extension, "application/octet-stream")
+                : contentType;
+    }
+
+    private String normalizeContentType(String contentType) {
+        return contentType == null ? "" : contentType.split(";")[0].trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isCompatibleExtension(String extension, String contentType) {
+        String expected = MIME_BY_EXTENSION.get(extension);
+        if (expected == null) {
+            return false;
+        }
+        if (expected.equals(contentType)) {
+            return true;
+        }
+        return Set.of("jpg", "jpeg").contains(extension) && "image/jpeg".equals(contentType);
     }
 
     private void hydrateReferences(Video video) {

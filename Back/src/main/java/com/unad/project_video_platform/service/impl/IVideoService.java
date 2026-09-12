@@ -24,12 +24,12 @@ public interface IVideoService {
     Video createVideo(Video video);
 
     /**
-     * Crea un nuevo video con materiales PDF asociados
+     * Crea un nuevo video con materiales asociados
      */
     Video createVideo(Video video, MultipartFile[] materials);
 
     /**
-     * Agrega materiales PDF a un video existente
+     * Agrega materiales a un video existente
      */
     Video addMaterials(Integer id, MultipartFile[] materials);
 
@@ -47,4 +47,5 @@ public interface IVideoService {
      * Elimina un video por ID
      */
     void deleteVideo(Integer id);
+
 }

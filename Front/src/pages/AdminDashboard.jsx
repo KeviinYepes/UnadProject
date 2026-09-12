@@ -5,6 +5,7 @@ import Pagination from "../components/Pagination";
 import UserService from "../services/UserService";
 import VideoService from "../services/VideoService";
 import VideoStatsService from "../services/VideoStatsService";
+import { getMaterialFormatsSummary } from "../utils/materialFormats";
 
 const PAGE_SIZE = 6;
 
@@ -698,6 +699,7 @@ const buildVideoRow = (video, stats) => {
   const latestStat = videoStats.reduce(getLatestStat, null);
   const hasVideo = Boolean(String(video.urlVideo || "").trim());
   const hasMaterials = Array.isArray(video.materials) && video.materials.length > 0;
+  const materialSummary = getMaterialFormatsSummary(video.materials || []);
 
   return {
     id: video.id,
@@ -709,7 +711,7 @@ const buildVideoRow = (video, stats) => {
     avgMinutesPerView: views > 0 ? watchTimeSeconds / 60 / views : 0,
     lastUser: latestStat?.user ? getUserName(latestStat.user) : "Sin visualizaciones",
     lastViewAt: latestStat?.lastViewAt,
-    type: hasVideo ? (hasMaterials ? "Video + PDF" : "Video") : "Solo PDF",
+    type: hasVideo ? (hasMaterials ? `Video + ${materialSummary}` : "Video") : materialSummary || "Material",
     status: getUsageStatus(views),
   };
 };
