@@ -1,6 +1,5 @@
 package com.unad.project_video_platform.service;
 
-import com.unad.project_video_platform.dto.ChangePasswordRequest;
 import com.unad.project_video_platform.dto.ProfileUpdateRequest;
 import com.unad.project_video_platform.entity.User;
 import com.unad.project_video_platform.repository.RoleRepository;
@@ -9,7 +8,6 @@ import com.unad.project_video_platform.service.impl.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,9 +23,6 @@ public class UserService implements IUserService {
 
     @Autowired
     private RoleRepository roleRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private FileStorageService fileStorageService;
@@ -95,12 +90,6 @@ public class UserService implements IUserService {
             user.setStatus(true);
         }
 
-        if (user.getPassword() == null || user.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode("User123!"));
-        } else {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-        }
-
         return userRepository.save(user);
     }
 
@@ -141,10 +130,6 @@ public class UserService implements IUserService {
         user.setCargo(userDetails.getCargo());
         user.setBio(userDetails.getBio());
         user.setPhotoUrl(userDetails.getPhotoUrl());
-
-        if (userDetails.getPassword() != null && !userDetails.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
-        }
 
         return userRepository.save(user);
     }
@@ -205,21 +190,6 @@ public class UserService implements IUserService {
         user.setPhone(request.getPhone());
         user.setCargo(request.getCargo());
         return userRepository.save(user);
-    }
-
-    @Transactional
-    public void changePassword(ChangePasswordRequest request) {
-        User user = getCurrentUserEntity();
-        if (request.getCurrentPassword() == null
-                || user.getPassword() == null
-                || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("La contrasena actual es incorrecta");
-        }
-        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-            throw new IllegalArgumentException("La nueva contrasena debe tener al menos 6 caracteres");
-        }
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
     }
 
     @Transactional

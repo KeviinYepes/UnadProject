@@ -17,7 +17,48 @@ const AdminDashboard = () => {
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("resumen");
-  const [selectedPeriod, setSelectedPeriod] = useState("all");
+  const [periodPreset, setPeriodPreset] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterValue, setFilterValue] = useState("");
+
+  const applyPeriodPreset = (preset) => {
+    setPeriodPreset(preset);
+    setCurrentPage(1);
+
+    if (preset === "all" || preset === "custom") {
+      setDateFrom("");
+      setDateTo("");
+      return;
+    }
+
+    const now = new Date();
+    const range =
+      preset === "thisMonth"
+        ? [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0)]
+        : [new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 0)];
+
+    setDateFrom(toInputDate(range[0]));
+    setDateTo(toInputDate(range[1]));
+  };
+
+  const handleManualDateChange = (setter) => (event) => {
+    setter(event.target.value);
+    setPeriodPreset("custom");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = periodPreset !== "all" || filterType !== "all";
+
+  const clearAllFilters = () => {
+    setPeriodPreset("all");
+    setDateFrom("");
+    setDateTo("");
+    setFilterType("all");
+    setFilterValue("");
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -49,19 +90,46 @@ const AdminDashboard = () => {
     cargarDatos();
   }, []);
 
-  const periods = useMemo(() => buildPeriods(stats), [stats]);
   const filteredStats = useMemo(
-    () => filterStatsByPeriod(stats, selectedPeriod),
-    [stats, selectedPeriod]
+    () => filterStatsByDateRange(stats, dateFrom, dateTo),
+    [stats, dateFrom, dateTo]
   );
+
+  const categoryOptions = useMemo(() => buildCategoryOptions(videos), [videos]);
+  const userOptions = useMemo(() => buildUserOptions(usuarios), [usuarios]);
+
+  const scopedStats = useMemo(
+    () => filterStatsBySelection(filteredStats, filterType, filterValue),
+    [filteredStats, filterType, filterValue]
+  );
+  const scopedVideos = useMemo(
+    () => (filterType === "category" && filterValue
+      ? videos.filter((video) => String(video.category?.id) === String(filterValue))
+      : videos),
+    [videos, filterType, filterValue]
+  );
+
   const analytics = useMemo(
-    () => buildAnalytics({ videos, users: usuarios, stats: filteredStats, allStats: stats }),
-    [videos, usuarios, filteredStats, stats]
+    () => buildAnalytics({ videos: scopedVideos, users: usuarios, stats: scopedStats }),
+    [scopedVideos, usuarios, scopedStats]
   );
   const paginatedVideoRows = useMemo(
     () => paginate(analytics.videoRows, currentPage, PAGE_SIZE),
     [analytics.videoRows, currentPage]
   );
+
+  const isUserFiltered = filterType === "user" && Boolean(filterValue);
+  const visibleTabs = [
+    ["resumen", "Resumen"],
+    ["historico", "Historico"],
+    ...(isUserFiltered ? [] : [["usuarios", "Usuarios"]]),
+  ];
+
+  useEffect(() => {
+    if (isUserFiltered && activeTab === "usuarios") {
+      setActiveTab("resumen");
+    }
+  }, [isUserFiltered, activeTab]);
 
   useEffect(() => {
     setCurrentPage((page) => clampPage(page, analytics.videoRows.length, PAGE_SIZE));
@@ -85,13 +153,12 @@ const AdminDashboard = () => {
     const frameDocument = frame.contentWindow?.document;
     if (!frameDocument) return;
 
-    const periodLabel =
-      selectedPeriod === "all"
-        ? "Todo el historico"
-        : periods.find((period) => period.key === selectedPeriod)?.label || selectedPeriod;
+    const periodLabel = buildDateRangeLabel(dateFrom, dateTo);
+
+    const filterLabel = buildFilterLabel(filterType, filterValue, categoryOptions, userOptions);
 
     frameDocument.open();
-    frameDocument.write(buildPdfReportHtml(analytics, periodLabel));
+    frameDocument.write(buildPdfReportHtml(analytics, periodLabel, filterLabel));
     frameDocument.close();
 
     frame.onload = () => {
@@ -108,46 +175,107 @@ const AdminDashboard = () => {
         <Header />
         <main className="flex-1 p-8">
           <div className="mx-auto flex max-w-7xl flex-col gap-8">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <h1 className="text-3xl font-extrabold text-text-primary-light dark:text-text-primary-dark">
-                  Panel Administrativo
-                </h1>
-                <p className="mt-2 text-text-secondary-light dark:text-text-secondary-dark">
-                  Historico y analitica de consumo de contenido.
-                </p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-extrabold text-text-primary-light dark:text-text-primary-dark">
+                Panel Administrativo
+              </h1>
+              <p className="mt-2 text-text-secondary-light dark:text-text-secondary-dark">
+                Historico y analitica de consumo de contenido.
+              </p>
+            </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <label className="flex flex-col gap-1 text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark">
-                  Periodo
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
+                <SegmentedControl
+                  value={periodPreset}
+                  onChange={applyPeriodPreset}
+                  options={[
+                    ["all", "Todo"],
+                    ["thisMonth", "Este mes"],
+                    ["lastMonth", "Mes anterior"],
+                    ["custom", "Personalizado"],
+                  ]}
+                />
+
+                {periodPreset === "custom" && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      aria-label="Desde"
+                      value={dateFrom}
+                      max={dateTo || undefined}
+                      onChange={handleManualDateChange(setDateFrom)}
+                      className="input h-9 w-[8.5rem]"
+                    />
+                    <span className="text-text-secondary-light dark:text-text-secondary-dark">–</span>
+                    <input
+                      type="date"
+                      aria-label="Hasta"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={handleManualDateChange(setDateTo)}
+                      className="input h-9 w-[8.5rem]"
+                    />
+                  </div>
+                )}
+
+                <div className="h-6 w-px bg-border-light dark:bg-border-dark" />
+
+                <SegmentedControl
+                  value={filterType}
+                  onChange={(value) => {
+                    setFilterType(value);
+                    setFilterValue("");
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    ["all", "Todos"],
+                    ["category", "Categoria"],
+                    ["user", "Usuario"],
+                  ]}
+                />
+
+                {filterType !== "all" && (
                   <select
-                    value={selectedPeriod}
+                    value={filterValue}
                     onChange={(event) => {
-                      setSelectedPeriod(event.target.value);
+                      setFilterValue(event.target.value);
                       setCurrentPage(1);
                     }}
-                    className="input h-10 min-w-48"
+                    className="input h-9 w-48"
                   >
-                    <option value="all">Todo el historico</option>
-                    {periods.map((period) => (
-                      <option key={period.key} value={period.key}>
-                        {period.label}
+                    <option value="">
+                      {filterType === "category" ? "Selecciona una categoria" : "Selecciona un usuario"}
+                    </option>
+                    {(filterType === "category" ? categoryOptions : userOptions).map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
                       </option>
                     ))}
                   </select>
-                </label>
+                )}
 
-                <button
-                  type="button"
-                  onClick={exportReport}
-                  disabled={analytics.videoRows.length === 0}
-                  className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <span className="material-symbols-outlined text-lg">download</span>
-                  Exportar reporte
-                </button>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="group inline-flex items-center gap-1 text-sm font-bold text-primary"
+                  >
+                    <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+                    <span className="group-hover:underline">Limpiar filtros</span>
+                  </button>
+                )}
               </div>
+
+              <button
+                type="button"
+                onClick={exportReport}
+                disabled={analytics.videoRows.length === 0}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined text-lg">download</span>
+                Exportar reporte
+              </button>
             </div>
 
             {error && (
@@ -184,11 +312,7 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 border-b border-border-light dark:border-border-dark">
-              {[
-                ["resumen", "Resumen"],
-                ["historico", "Historico"],
-                ["usuarios", "Usuarios"],
-              ].map(([key, label]) => (
+              {visibleTabs.map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -378,6 +502,25 @@ const UsersAnalyticsView = ({ analytics }) => (
         </div>
       </Panel>
     </aside>
+  </div>
+);
+
+const SegmentedControl = ({ value, onChange, options }) => (
+  <div className="flex items-center gap-1 rounded-lg bg-surface-light p-1 dark:bg-surface-dark">
+    {options.map(([key, label]) => (
+      <button
+        key={key}
+        type="button"
+        onClick={() => onChange(key)}
+        className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+          value === key
+            ? "bg-white text-primary shadow-sm dark:bg-card-dark"
+            : "text-text-secondary-light hover:text-primary dark:text-text-secondary-dark"
+        }`}
+      >
+        {label}
+      </button>
+    ))}
   </div>
 );
 
@@ -646,7 +789,7 @@ const EmptyState = ({ text }) => (
   </div>
 );
 
-const buildAnalytics = ({ videos, users, stats, allStats }) => {
+const buildAnalytics = ({ videos, users, stats }) => {
   const totalViews = stats.reduce((acc, stat) => acc + Number(stat.totalViews || 0), 0);
   const watchTimeSeconds = stats.reduce((acc, stat) => acc + Number(stat.watchTimeSeconds || 0), 0);
   const viewedContentIds = new Set(stats.filter(hasActivity).map((stat) => Number(stat.content?.id)));
@@ -660,7 +803,7 @@ const buildAnalytics = ({ videos, users, stats, allStats }) => {
 
   const userRows = buildUserRows(stats);
   const categoryRows = buildCategoryRows(stats);
-  const trendRows = buildTrendRows(allStats);
+  const trendRows = buildTrendRows(stats);
   const inactiveUsers = users.filter((user) => !uniqueViewerIds.has(Number(user.id)));
   const contentWithoutViews = videos.length - viewedContentIds.size;
 
@@ -800,13 +943,56 @@ const buildTrendRows = (stats) => {
     .sort((a, b) => a.date - b.date);
 };
 
-const buildPeriods = (stats) =>
-  buildTrendRows(stats)
-    .map((row) => ({ key: row.key, label: row.label }))
-    .sort((a, b) => b.key.localeCompare(a.key));
+const getPeriodBounds = (stat) => {
+  const date = getPeriodDate(stat);
+  const start = new Date(date.getFullYear(), date.getMonth(), 1);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+};
+
+const parseDateInput = (value) => {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const toInputDate = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const filterStatsByDateRange = (stats, dateFrom, dateTo) => {
+  const from = parseDateInput(dateFrom);
+  let to = parseDateInput(dateTo);
+  if (to) {
+    to = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+  }
+  const effectiveFrom = from && to && from > to ? to : from;
+  const effectiveTo = from && to && from > to ? from : to;
+
+  if (!effectiveFrom && !effectiveTo) return stats;
+
+  return stats.filter((stat) => {
+    const { start, end } = getPeriodBounds(stat);
+    if (effectiveFrom && end < effectiveFrom) return false;
+    if (effectiveTo && start > effectiveTo) return false;
+    return true;
+  });
+};
+
+const buildDateRangeLabel = (dateFrom, dateTo) => {
+  if (!dateFrom && !dateTo) return "Todo el historico";
+
+  const formatDay = (value) =>
+    new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric" }).format(
+      parseDateInput(value)
+    );
+
+  if (dateFrom && dateTo) return `${formatDay(dateFrom)} al ${formatDay(dateTo)}`;
+  if (dateFrom) return `Desde ${formatDay(dateFrom)}`;
+  return `Hasta ${formatDay(dateTo)}`;
+};
 
 const buildInsights = ({ videoRows, categoryRows, userRows, metrics }) => {
-  const topVideo = videoRows[0];
+  const topVideo = videoRows[0]?.views > 0 ? videoRows[0] : null;
   const topCategory = categoryRows[0];
   const lowEngagement = videoRows
     .filter((row) => row.views > 0)
@@ -848,9 +1034,45 @@ const buildInsights = ({ videoRows, categoryRows, userRows, metrics }) => {
   ];
 };
 
-const filterStatsByPeriod = (stats, selectedPeriod) => {
-  if (selectedPeriod === "all") return stats;
-  return stats.filter((stat) => getPeriodKey(stat) === selectedPeriod);
+const buildCategoryOptions = (videos) => {
+  const map = new Map();
+  videos.forEach((video) => {
+    const id = video.category?.id;
+    if (id != null && !map.has(id)) {
+      map.set(id, video.category?.categoryName || "Sin categoria");
+    }
+  });
+
+  return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+    a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+  );
+};
+
+const buildUserOptions = (users) =>
+  users
+    .map((user) => ({ id: user.id, name: getUserName(user) }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+
+const filterStatsBySelection = (stats, filterType, filterValue) => {
+  if (filterType === "category" && filterValue) {
+    return stats.filter((stat) => String(stat.content?.category?.id) === String(filterValue));
+  }
+  if (filterType === "user" && filterValue) {
+    return stats.filter((stat) => String(stat.user?.id) === String(filterValue));
+  }
+  return stats;
+};
+
+const buildFilterLabel = (filterType, filterValue, categoryOptions, userOptions) => {
+  if (filterType === "category") {
+    const category = categoryOptions.find((option) => String(option.id) === String(filterValue));
+    return category ? `Categoria: ${category.name}` : "Categoria: todas";
+  }
+  if (filterType === "user") {
+    const user = userOptions.find((option) => String(option.id) === String(filterValue));
+    return user ? `Usuario: ${user.name}` : "Usuario: todos";
+  }
+  return null;
 };
 
 const getUsageStatus = (views) => {
@@ -937,7 +1159,7 @@ const clampPage = (page, totalItems, pageSize) => {
   return Math.min(Math.max(1, page), totalPages);
 };
 
-const buildPdfReportHtml = (analytics, periodLabel) => {
+const buildPdfReportHtml = (analytics, periodLabel, filterLabel) => {
   const generatedAt = new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
     month: "long",
@@ -998,7 +1220,7 @@ const buildPdfReportHtml = (analytics, periodLabel) => {
       </head>
       <body>
         <h1>Reporte historico de metricas</h1>
-        <div class="subtitle">Periodo: ${escapeHtml(periodLabel)} | Generado el ${escapeHtml(generatedAt)}</div>
+        <div class="subtitle">Periodo: ${escapeHtml(periodLabel)}${filterLabel ? ` | ${escapeHtml(filterLabel)}` : ""} | Generado el ${escapeHtml(generatedAt)}</div>
 
         <section class="metrics">
           <div class="metric">

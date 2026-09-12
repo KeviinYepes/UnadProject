@@ -1,7 +1,6 @@
 package com.unad.project_video_platform.controller;
 
 import com.unad.project_video_platform.dto.ApiResponse;
-import com.unad.project_video_platform.dto.ChangePasswordRequest;
 import com.unad.project_video_platform.dto.ProfileUpdateRequest;
 import com.unad.project_video_platform.entity.User;
 import com.unad.project_video_platform.service.impl.IUserService;
@@ -108,23 +107,6 @@ public class UserController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.<User>internalError(e.getMessage()));
-        }
-    }
-
-    /**
-     * PUT /api/users/me/password - Cambia la contraseña
-     */
-    @PutMapping("/me/password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(@RequestBody ChangePasswordRequest request) {
-        try {
-            userService.changePassword(request);
-            return ResponseEntity.ok(ApiResponse.<Void>ok("Password updated", null));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.<Void>badRequest(e.getMessage()));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.<Void>internalError(e.getMessage()));
         }
     }
 

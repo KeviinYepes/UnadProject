@@ -94,9 +94,6 @@ const UserService = {
       role: userData?.roleId ? { id: Number(userData.roleId) } : null,
       status,
     };
-    if (userData?.password) {
-      payload.password = userData.password;
-    }
 
     const response = await api.post("/api/users", payload);
     return response.data.data || response.data;
@@ -119,9 +116,6 @@ const UserService = {
       role: userData?.roleId ? { id: Number(userData.roleId) } : null,
       status,
     };
-    if (userData?.password) {
-      payload.password = userData.password;
-    }
 
     const response = await api.put(`/api/users/${id}`, payload);
     return response.data.data || response.data;
@@ -160,14 +154,6 @@ const UserService = {
     const formData = new FormData();
     formData.append("file", file);
     const response = await api.post("/api/users/me/photo", formData);
-    return response.data.data || response.data;
-  },
-
-  /**
-   * Cambia la contraseña del usuario autenticado
-   */
-  changePassword: async (data) => {
-    const response = await api.put("/api/users/me/password", data);
     return response.data.data || response.data;
   },
 };
